@@ -1,0 +1,7 @@
+﻿step,removed,remaining
+raw,0,497472
+exact_duplicate,0,497472
+missing_key,0,497472
+conflicting_key,0,497472
+invalid_close,0,497472
+inconsistent_ohlc,12,497460

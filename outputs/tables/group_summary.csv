@@ -1,0 +1,5 @@
+﻿group,definition,stocks,mean_cagr,mean_daily_volatility
+A,CAGR cao / biến động thấp,180,0.16274604230715897,0.01240611899935936
+B,CAGR cao / biến động cao,77,0.2197790212272958,0.0191290739399116
+C,CAGR thấp / biến động thấp,119,0.029435728249295662,0.012710510686459191
+D,CAGR thấp / biến động cao,107,-0.04049222048572685,0.020756351826620452

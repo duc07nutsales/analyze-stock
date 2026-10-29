@@ -1,0 +1,3 @@
+﻿metric,threshold,rule
+cagr,0.09396988886021491,high_if_greater_or_equal_tol_1e-12
+daily_volatility,0.015402734017380766,high_if_greater_or_equal_tol_1e-12
