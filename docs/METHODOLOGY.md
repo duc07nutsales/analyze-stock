@@ -1,13 +1,15 @@
 # METHODOLOGY — Phương pháp phân tích S&P 500 (2014–2017)
 
-**Phiên bản:** 1.1 — đã triển khai và chạy trên CSV ngày 26/10/2026.  
+**Phiên bản:** 1.2 — ML đã triển khai và chạy trên CSV ngày 06/11/2026.  
 **Ràng buộc cao nhất về kỹ thuật:** `allowed_knowledge_reference.md`. File này hướng dẫn *cách* thực hiện, **không thay thế** danh sách cho phép đầy đủ. Mọi ví dụ và thuật toán dưới đây chỉ là thiết kế; kiểm chứng lại đúng chữ ký hàm khi viết code.
 
 ## 0. Khung thực hiện
 
+**Cập nhật phạm vi 06/11/2026:** Người dùng đã yêu cầu triển khai mục học máy tùy chọn. Thiết kế cụ thể tại `docs/README_KE_HOACH_HOC_MAY.md` được ưu tiên cho mục 4–5: dùng toàn bộ mã có mẫu hợp lệ theo thời điểm, phiên `t-1/t/t+1` phải liền kề theo lịch dataset, train có cả `t` và ngày nhãn trong 2014–2016, test có cả hai trong 2017. Không chọn tập ML theo CAGR/độ phủ tính qua năm 2017. Logistic Regression chuẩn hóa bằng tham số train; Random Forest dùng giá trị gốc. Baseline lấy nhãn đa số train. Kết quả thực: 370.378 train, 125.520 test; cả hai mô hình không vượt Accuracy baseline 52,75%.
+
 ### Quyết định thực thi v1.1 (thay thế những lựa chọn dự kiến bên dưới)
 
-- Theo xác nhận của người dùng: **chỉ phân tích và phân nhóm, không ML**. Mục 4–5 giữ làm thiết kế tham khảo, không chạy.
+- Lựa chọn v1.1 trước đây là chỉ phân tích và phân nhóm; cập nhật v1.2 phía trên đã mở rộng thêm ML.
 - Schema thực: `symbol,date,open,high,low,close,volume`; 497.472 dòng, 505 mã; 02/01/2014–29/12/2017, 1.007 ngày quan sát.
 - Trùng hoàn toàn: giữ bản đầu sau chuẩn hóa symbol/ngày. Khóa trùng có nội dung khác: cách ly tất cả bản ghi còn lại của khóa đó. Giữ `source_row` để truy ngược CSV.
 - Thiếu khóa, close không hữu hạn/không dương, OHLC mâu thuẫn: cách ly. Thiếu OHL hoặc volume lỗi vẫn giữ cho phân tích close nếu close hợp lệ và không có mâu thuẫn OHLC đã quan sát; đánh dấu `complete_ohlcv=False`. Không tính chỉ tiêu thanh khoản từ những dòng này. Bản này chỉ tính chỉ tiêu từ close.
@@ -18,7 +20,7 @@
 - Bốn nhóm theo ngưỡng trung bình của tập đủ điều kiện; bằng ngưỡng (dung sai tuyệt đối 1e-12 ở đơn vị tỷ lệ) thuộc phía cao. Không làm tròn chỉ tiêu trước phân nhóm.
 - Chọn hai đầu CAGR mỗi nhóm: hòa thì symbol tăng dần; nếu cả nhóm cùng CAGR, lấy hai symbol đầu/cuối để không lặp. Dataset này chọn 8 mã. Đây là lựa chọn ví dụ theo hiệu suất lịch sử, không phải mẫu ngẫu nhiên.
 - Cờ cực đoan: `abs(observed_return)>=0.20`; giữ nguyên trong tính toán nếu cặp phiên hợp lệ. Ngưỡng chỉ phục vụ rà soát, không xác nhận split và không tự winsorize/xóa ngoại lai.
-- Script `sp500_analysis.py`, notebook `sp500_analysis.ipynb`, báo cáo `outputs/report.md`; 5 hình PNG, bảng CSV và bộ kiểm thử `test_analysis.py`. Không dùng dữ liệu ngoài.
+- Script `src/sp500_analysis.py`, notebook `notebooks/sp500_analysis.ipynb`, báo cáo `outputs/report.md`; 5 hình PNG mô tả, 2 hình ML, bảng CSV và bộ kiểm thử trong `tests/`. Không dùng dữ liệu ngoài.
 
 **Dữ liệu** → Kiểm toán/làm sạch → Tạo chỉ tiêu giá/lợi suất → So sánh/phân nhóm → (tùy chọn) Phân loại tăng giá phiên kế tiếp → Đánh giá → Storytelling.
 
@@ -187,7 +189,7 @@ Không dùng đặc trưng từ `t+1`; không tạo lag/rolling qua ranh giới 
 - [ ] Khả năng giá đã điều chỉnh (nếu không xác nhận được, phải diễn giải là biến động **giá được cung cấp**, không phải total return).
 - [ ] Khóa duy nhất ticker–date, các sự kiện trùng/thiếu, các thay đổi giá quá lớn.
 - [ ] Chốt bộ lọc số phiên và khoảng ngày; chốt 5–10 mã biểu diễn.
-- [ ] Chốt môi trường notebook và có đưa ML tùy chọn vào bản nộp không.
+- [x] Chốt Jupyter/VS Code local và đưa ML tùy chọn vào bản nộp theo yêu cầu ngày 06/11/2026.
 - [ ] Kiểm tra từng lời gọi hàm khi viết notebook với tài liệu cho phép.
 
 ---

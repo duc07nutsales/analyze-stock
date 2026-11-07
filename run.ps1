@@ -13,5 +13,5 @@ New-Item -ItemType Directory -Path 'outputs','outputs/tables','outputs/figures',
 $env:MPLBACKEND = 'Agg'
 $env:MPLCONFIGDIR = Join-Path $PSScriptRoot '.cache/matplotlib'
 $env:PYTHONUTF8 = '1'
-& '.\.venv\Scripts\python.exe' -u sp500_analysis.py
+& '.\.venv\Scripts\python.exe' -u -m src.sp500_analysis
 if ($LASTEXITCODE -ne 0) { throw 'Phan tich that bai; khong dung ket qua chay do.' }

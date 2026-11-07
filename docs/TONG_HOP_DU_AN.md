@@ -1,8 +1,8 @@
 # Tổng hợp dự án phân tích cổ phiếu S&P 500 (2014–2017)
 
-**Ngày tổng hợp:** 26/10/2026.  
+**Ngày cập nhật:** 06/11/2026.  
 **Trạng thái:** Đã viết script, chạy notebook trên toàn bộ CSV, xuất bảng/biểu đồ/báo cáo và kiểm tra kết quả.  
-**Phạm vi đã xác nhận:** Chỉ phân tích dữ liệu và phân nhóm cổ phiếu; không triển khai học máy.
+**Phạm vi hiện hành:** Phân tích dữ liệu, phân nhóm cổ phiếu và thử nghiệm ML dự đoán chiều giá phiên kế tiếp.
 
 Tài liệu này mô tả toàn bộ bài làm hiện tại: yêu cầu, dữ liệu, phương pháp, cấu trúc mã, kết quả, cách chạy và giới hạn. Các con số là kết quả của phiên bản đã kiểm tra, không phải số liệu đặt trước. Khi thay dữ liệu hoặc tham số, cần chạy lại và cập nhật phần kết quả của tài liệu này.
 
@@ -18,7 +18,7 @@ Chủ đề được chọn là phân tích giá cổ phiếu S&P 500 giai đo�
 4. Có thể chia cổ phiếu thành những nhóm mô tả nào theo hiệu suất–rủi ro?
 5. Những mã được chọn để xem sâu minh họa điều gì, và kết quả có giới hạn nào?
 
-Đầu ra chính là notebook chạy lại được, có code, bảng, biểu đồ và diễn giải. Script Python cung cấp cách chạy toàn bộ quy trình từ một lệnh. Phần học máy trong kế hoạch ban đầu đã được người dùng quyết định không thực hiện.
+Đầu ra chính là notebook chạy lại được, có code, bảng, biểu đồ và diễn giải. Script Python cung cấp cách chạy toàn bộ quy trình từ một lệnh. Người dùng đã yêu cầu triển khai phần học máy tùy chọn trong cập nhật 06/11/2026; thiết kế và kết quả ở mục 18.
 
 ## 2. Nguồn yêu cầu và giới hạn kỹ thuật
 
@@ -212,31 +212,31 @@ Trong toàn bộ tập đủ điều kiện, NVDA có CAGR cao nhất và CHK th
 
 ### 11.1. Phân phối lợi suất một phiên
 
-![Phân phối lợi suất](outputs/figures/01_return_distribution.png)
+![Phân phối lợi suất](../outputs/figures/01_return_distribution.png)
 
 Dùng các daily return hợp lệ của tập đủ điều kiện. Hình trái giữ toàn bộ phân phối; hình phải phóng to vùng từ −10% đến 10% và ghi số quan sát ngoài vùng. Phóng to hình không làm thay đổi dữ liệu dùng tính chỉ tiêu. Các quan sát mã–phiên có thể phụ thuộc lẫn nhau.
 
 ### 11.2. Xếp hạng CAGR
 
-![Xếp hạng CAGR](outputs/figures/02_cagr_ranking.png)
+![Xếp hạng CAGR](../outputs/figures/02_cagr_ranking.png)
 
 So sánh 10 mã thấp nhất và 10 mã cao nhất trên kỳ chung. Thanh bắt đầu từ đường 0, thể hiện được cả giá trị âm và dương. CAGR mô tả hai đầu kỳ, cần đọc cùng volatility và đường giá.
 
 ### 11.3. Hiệu suất–rủi ro và ranh giới nhóm
 
-![Phân nhóm theo CAGR và volatility](outputs/figures/03_risk_return_groups.png)
+![Phân nhóm theo CAGR và volatility](../outputs/figures/03_risk_return_groups.png)
 
 Mỗi điểm là một mã: trục ngang là daily volatility, trục dọc là CAGR. Hai đường nét đứt biểu diễn ngưỡng trung bình; màu thể hiện nhóm A/B/C/D. Không suy ra quan hệ nhân quả từ biểu đồ này.
 
 ### 11.4. Số lượng mã trong từng nhóm
 
-![Quy mô bốn nhóm](outputs/figures/04_group_counts.png)
+![Quy mô bốn nhóm](../outputs/figures/04_group_counts.png)
 
 Tổng số mã của bốn nhóm bằng 483. Nhóm A đông nhất với 180 mã, nhóm B ít nhất với 77 mã. Đây là phân bố số mã trong tập được lọc, không phải tỷ trọng vốn hóa thị trường.
 
 ### 11.5. Giá chuẩn hóa của tám mã
 
-![Giá chuẩn hóa](outputs/figures/05_selected_normalized_prices.png)
+![Giá chuẩn hóa](../outputs/figures/05_selected_normalized_prices.png)
 
 Mỗi đường bắt đầu ở mốc 100 cùng ngày, giúp so sánh thay đổi tương đối. Khoảng thiếu phiên để đứt đường, không nội suy. Bốn ô có thang dọc riêng; phải đọc giá trị trục khi so sánh giữa các ô.
 
@@ -260,32 +260,21 @@ Script `sp500_analysis.py` được chia bằng dấu `# %%`, có thể đọc t
 | `write_report()` | Sinh báo cáo từ kết quả của lần chạy hiện tại |
 | `main()` | Điều phối quy trình; dừng nếu không đủ dữ liệu hoặc không có mã đạt điều kiện |
 
-Notebook chứa sáu phần code tương ứng và phần Markdown giải thích. Notebook đã lưu kết quả chạy và năm hình nhúng. Không cần học máy hoặc thư viện scikit-learn cho bài hiện tại.
+Notebook chứa bảy phần code tương ứng và Markdown giải thích. Notebook đã chạy phần phân tích mô tả và ML, lưu bảy hình nhúng cùng báo cáo kết quả. Phần ML dùng scikit-learn chạy cục bộ.
 
 ## 13. Cấu trúc file và đầu ra
 
+Xem [sơ đồ cấu trúc và vai trò từng thư mục](CAU_TRUC_DU_AN.md).
+
 ```text
 project/
-├── TONG_HOP_DU_AN.md                 # Tài liệu tổng hợp này
-├── de_bai.md                        # Đề bài
-├── allowed_knowledge_reference.md   # Giới hạn kiến thức
-├── REQUIREMENTS.md                  # Yêu cầu và nghiệm thu
-├── METHODOLOGY.md                   # Phương pháp chi tiết
-├── SP500_PROJECT_PLAN.md            # Kế hoạch và cập nhật
-├── README.md                        # Hướng dẫn ngắn
-├── S&P 500 Stock Prices 2014-2017.csv
-├── sp500_analysis.py                # Script chính
-├── sp500_analysis.ipynb             # Notebook có kết quả
-├── analysis_config.py              # Tham số
-├── test_analysis.py                # Kiểm thử phát triển
-├── run.ps1                         # Lệnh chạy Windows
-├── requirements.txt                # Thư viện cần cài
-├── requirements-lock.txt           # Phiên bản môi trường đã kiểm tra
-└── outputs/
-    ├── report.md                   # Báo cáo sinh tự động
-    ├── validation.md               # Ghi nhận kiểm chứng phiên bản đã chạy
-    ├── tables/                     # 15 bảng CSV
-    └── figures/                    # 5 hình PNG
+├── README.md, run.ps1, requirements*.txt
+├── data/           CSV gốc
+├── src/            Cấu hình, phân tích, học máy
+├── notebooks/      Notebook đã chạy
+├── tests/          Kiểm thử dữ liệu nhỏ
+├── docs/           Đề bài, phương pháp, kế hoạch, tổng hợp
+└── outputs/        Báo cáo, bảng, hình, bản ghi kiểm chứng
 ```
 
 `.venv/` chứa môi trường Python; `.cache/` chứa cache và công cụ hỗ trợ phát triển. Hai thư mục này không phải nội dung phân tích cần trình bày trong báo cáo.
@@ -307,6 +296,10 @@ project/
 | `group_summary.csv` | Số mã và chỉ tiêu trung bình từng nhóm |
 | `group_thresholds.csv` | Hai ngưỡng đầy đủ và quy tắc bằng ngưỡng |
 | `selected_stocks.csv` | Tám mã chuyên sâu và lý do chọn |
+| `ml_sample_audit.csv` | Số mẫu ML giữ/loại theo giai đoạn và lý do |
+| `ml_metrics.csv` | Chỉ số của baseline và hai mô hình trên cùng test |
+| `ml_confusion_matrices.csv` | TN/FP/FN/TP của ba cách dự đoán |
+| `ml_test_predictions.csv` | Nhãn thật, dự đoán và xác suất trên từng mẫu test |
 
 ## 14. Tham số và hướng dẫn chạy
 
@@ -315,13 +308,13 @@ project/
 Trong `analysis_config.py`:
 
 ```python
-DATA_FILE = "S&P 500 Stock Prices 2014-2017.csv"
+DATA_FILE = "data/S&P 500 Stock Prices 2014-2017.csv"
 OUTPUT_DIR = "outputs"
 MIN_COVERAGE = 0.95
 EXTREME_RETURN = 0.20
 ```
 
-`MIN_COVERAGE` áp dụng cho cả độ phủ giá và độ phủ cặp phiên. `EXTREME_RETURN` chỉ điều khiển gắn cờ, không lọc bỏ dữ liệu. Giữ `OUTPUT_DIR="outputs"` khi dùng runner mặc định; nếu đổi đường dẫn thì cần tạo các thư mục `tables` và `figures` tương ứng trước khi chạy.
+`MIN_COVERAGE` áp dụng cho cả độ phủ giá và độ phủ cặp phiên của **phân tích mô tả**, không dùng để lọc mẫu ML. `EXTREME_RETURN` chỉ điều khiển gắn cờ, không lọc bỏ dữ liệu. ML dùng thêm `ML_RANDOM_STATE=42`, `ML_N_TREES=30`, `ML_MAX_ITER=1000`. Giữ `OUTPUT_DIR="outputs"` khi dùng runner mặc định; nếu đổi đường dẫn thì cần tạo các thư mục `tables` và `figures` tương ứng trước khi chạy.
 
 ### 14.2. Chạy script trên Windows
 
@@ -339,22 +332,23 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\run.ps1
 
 Runner tạo `.venv` nếu chưa có, tạo các thư mục đầu ra, cấu hình cache Matplotlib trong project và chạy script bằng Python của `.venv`. Backend không mở cửa sổ biểu đồ. `ExecutionPolicy Bypass` chỉ áp dụng cho tiến trình của lệnh, không thay đổi thiết lập hệ thống.
 
-Cài thư viện cần Internet; chạy phân tích chỉ đọc CSV cục bộ. Môi trường đã kiểm tra dùng Python 3.14.8. Các thư viện phân tích chính là NumPy, Pandas và Matplotlib; nbformat, nbclient, ipykernel phục vụ notebook.
+Cài thư viện cần Internet; chạy phân tích chỉ đọc CSV cục bộ. Môi trường đã kiểm tra dùng Python 3.14.8. Phần mô tả dùng NumPy, Pandas, Matplotlib; phần ML dùng thêm scikit-learn. nbformat, nbclient, ipykernel phục vụ notebook. Không gọi API mô hình.
 
 Khi đã chuẩn bị thư mục và thư viện, cũng có thể chạy trực tiếp:
 
 ```powershell
-.\.venv\Scripts\python.exe sp500_analysis.py
-.\.venv\Scripts\python.exe test_analysis.py
+.\.venv\Scripts\python.exe -m src.sp500_analysis
+.\.venv\Scripts\python.exe -m tests.test_analysis
+.\.venv\Scripts\python.exe -m tests.test_ml
 ```
 
 Các file đầu ra cùng tên được ghi lại sau mỗi lần chạy. Nếu lần chạy báo lỗi hoặc dừng sớm, không coi những file còn lại từ lần trước là kết quả mới hoàn chỉnh.
 
 ### 14.3. Chạy notebook
 
-1. Mở `sp500_analysis.ipynb` bằng VS Code hoặc Jupyter từ thư mục project.
+1. Mở `notebooks/sp500_analysis.ipynb` bằng VS Code hoặc Jupyter từ thư mục project.
 2. Chọn Python/kernel thuộc `.venv`.
-3. Giữ CSV và `analysis_config.py` cùng thư mục; bảo đảm có `outputs/tables/` và `outputs/figures/`.
+3. CSV ở `data/`, cấu hình ở `src/analysis_config.py`; bảo đảm có `outputs/tables/` và `outputs/figures/`.
 4. Chọn **Run All** rồi lưu notebook.
 5. Nếu đổi cấu hình, restart kernel trước khi Run All.
 
@@ -375,7 +369,7 @@ Một lỗi số thực ở trường hợp bằng ngưỡng đã được phát
 - Kiểm tra lợi suất không nối qua mã hoặc khoảng thiếu phiên.
 - Kiểm tra tổng số mã các nhóm bằng 483 và tám mã được chọn không trùng.
 - Đối chiếu các lời gọi API của script với danh sách cho phép.
-- Kiểm tra notebook đồng bộ sáu phần code với script, chạy không có output lỗi và chứa năm hình nhúng.
+- Kiểm tra notebook đồng bộ bảy phần code với script/module ML, chạy không có output lỗi và chứa bảy hình nhúng; phần ML được kiểm tra riêng bằng `test_ml.py`.
 - Xem trực tiếp cả năm PNG; kiểm tra chữ tiếng Việt, nhãn, đơn vị, bố cục và nhãn năm.
 
 SHA-256 của CSV gốc trước/sau giữ nguyên:
@@ -409,17 +403,38 @@ Hàm ý phù hợp là sử dụng bảng chỉ tiêu và nhóm như một bư�
 | Biến động cực đoan được giữ lại | Có thể tác động lớn đến volatility; cần đọc cờ rà soát |
 | Không có dữ liệu cơ bản, lãi suất phi rủi ro, thuế/phí | Không đánh giá đầy đủ quyết định hay hiệu quả đầu tư thực tế |
 
-Không triển khai ML, deep learning, K-Means/PCA, dự báo giá, Sharpe ratio, backtest, website hay dashboard. Maximum Drawdown là ý tưởng tùy chọn trong tài liệu ban đầu, chưa được đưa vào bản hiện tại.
+Đã triển khai ML phân loại chiều close phiên kế tiếp. Không triển khai deep learning, K-Means/PCA, dự báo **mức giá**, Sharpe ratio, backtest, website hay dashboard. Maximum Drawdown là ý tưởng tùy chọn trong tài liệu ban đầu, chưa được đưa vào bản hiện tại.
 
 Phần phân tích đã hoàn thành và kiểm chứng trong phạm vi được chọn. Những điều chưa xác nhận là tình trạng điều chỉnh giá và các yêu cầu hình thức nộp/rubric/hạn nộp bổ sung của giảng viên, nếu có.
 
-## 18. Liên kết để kiểm tra lại
+## 18. Phần học máy bổ sung ngày 06/11/2026
 
-- [Script Python](sp500_analysis.py)
-- [Notebook có kết quả](sp500_analysis.ipynb)
-- [Báo cáo sinh từ script](outputs/report.md)
-- [Ghi nhận kiểm chứng](outputs/validation.md)
-- [Cấu hình](analysis_config.py)
+**Mục tiêu:** Sau khi biết OHLCV đến cuối phiên `t`, dự đoán close phiên giao dịch kế tiếp cùng mã tăng (`1`) hay không tăng (`0`). Tập ML được tạo từ các dòng close sạch, không giới hạn ở 483 mã đã qua tiêu chí so sánh cả kỳ, vì bộ lọc đó dùng thông tin năm 2017.
+
+Năm đặc trưng gồm lợi suất phiên hiện tại, biên độ `(high-low)/open`, biến động `(close-open)/open`, volume hiện tại và thay đổi volume so với phiên trước. Cả phiên trước và sau phải liền kề theo lịch dataset. Train có `t` và ngày tạo nhãn thuộc 2014–2016; test có cả hai thuộc 2017. Scaler của Logistic Regression chỉ fit trên train. Baseline đoán nhãn đa số train; Random Forest dùng đặc trưng gốc. Chi tiết quy tắc ở [kế hoạch ML](README_KE_HOACH_HOC_MAY.md).
+
+| Cách dự đoán | Accuracy test | Precision tăng | Recall tăng | F1 tăng | ROC-AUC |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Baseline đa số | 52,75% | 52,75% | 100,00% | 69,06% | N/A |
+| Logistic Regression | 52,71% | 52,81% | 97,30% | 68,46% | 0,5123 |
+| Random Forest | 50,36% | 53,17% | 49,42% | 51,23% | 0,5058 |
+
+Train có **370.378 mẫu**, test có **125.520 mẫu**. Cả hai mô hình đều không vượt baseline về Accuracy trong lần kiểm tra này. Recall 100% của baseline đến từ cách đoán mọi mẫu đều “tăng”; F1 cao vì vậy không chứng minh model phân biệt tốt hai lớp. ROC-AUC của hai mô hình gần 0,5, cho thấy khả năng xếp hạng lớp tăng trong test rất yếu. Kết quả là thử nghiệm lịch sử, không phải bằng chứng chiến lược giao dịch sinh lời.
+
+![So sánh chỉ số ML](../outputs/figures/ml_metric_comparison.png)
+
+![Confusion matrix ML](../outputs/figures/ml_confusion_matrices.png)
+
+Bảng chi tiết nằm trong `outputs/tables/ml_sample_audit.csv`, `ml_metrics.csv`, `ml_confusion_matrices.csv` và `ml_test_predictions.csv`. Báo cáo sinh tự động ở `outputs/report.md` có phần storytelling kết hợp.
+
+## 19. Liên kết để kiểm tra lại
+
+- [Script Python](../src/sp500_analysis.py)
+- [Module ML](../src/sp500_ml.py)
+- [Notebook có kết quả](../notebooks/sp500_analysis.ipynb)
+- [Báo cáo sinh từ script](../outputs/report.md)
+- [Ghi nhận kiểm chứng](../outputs/validation.md)
+- [Cấu hình](../src/analysis_config.py)
 - [Phương pháp chi tiết](METHODOLOGY.md)
 - [Đề bài](de_bai.md)
 - [Danh sách kiến thức cho phép](allowed_knowledge_reference.md)

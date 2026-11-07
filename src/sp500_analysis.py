@@ -1,7 +1,7 @@
 # %% 1. Nhập thư viện và cấu hình — chương 4–7
-"""Phân tích mô tả S&P 500; chạy bằng .\run.ps1 từ PowerShell.
+"""Phân tích S&P 500; chạy bằng .\run.ps1 từ PowerShell.
 
-Chỉ dùng CSV cục bộ. Không huấn luyện ML theo lựa chọn của người dùng.
+Chỉ dùng CSV cục bộ; bước ML chạy sau phần phân tích mô tả.
 Các hàm phân tích được dùng chung với notebook, không sửa dữ liệu gốc.
 """
 
@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from analysis_config import DATA_FILE, OUTPUT_DIR, MIN_COVERAGE, EXTREME_RETURN
+from src.analysis_config import DATA_FILE, OUTPUT_DIR, MIN_COVERAGE, EXTREME_RETURN
 
 
 def save_table(frame, name):
@@ -432,7 +432,7 @@ def write_report(raw, clean, audit, calendar, steps, metrics, daily, eligible, s
         "survivorship bias và không đại diện đầy đủ thành phần S&P 500 qua từng thời điểm. "
         "Bộ lọc độ phủ cũng có thể tạo thiên lệch chọn mẫu. Không có dữ liệu cơ bản, thuế, phí giao dịch, "
         "lãi suất phi rủi ro hoặc backtest. Kết quả là mô tả lịch sử và gợi ý nghiên cứu, không phải khuyến nghị mua/bán.",
-        "\n**Tái lập:** chạy `run.ps1`; tham số trong `analysis_config.py`; bảng CSV trong `outputs/tables`, "
+        "\n**Tái lập:** chạy `run.ps1`; tham số trong `src/analysis_config.py`; bảng CSV trong `outputs/tables`, "
         "hình PNG trong `outputs/figures`. Dữ liệu gốc được giữ nguyên."
     ]
     text = "\n".join(report)
@@ -456,7 +456,9 @@ def main():
     make_figures(eligible, daily, summary, selected, thresholds)
     report = write_report(raw, clean, audit, calendar, steps, metrics, daily,
                           eligible, summary, selected, thresholds)
-    return report
+    from src.sp500_ml import run_ml
+    ml_result = run_ml(clean, report)
+    return ml_result
 
 
 if __name__ == "__main__":

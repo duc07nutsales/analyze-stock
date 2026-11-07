@@ -1,6 +1,7 @@
 numpy
 pandas
 matplotlib
+scikit-learn
 nbformat
 nbclient
 ipykernel

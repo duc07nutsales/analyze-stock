@@ -111,4 +111,29 @@ Bốn nhóm là một cách tổ chức kết quả để sàng lọc nghiên c�
 
 **Giới hạn:** dữ liệu chỉ giai đoạn 2014–2017; không có thông tin xác nhận adjusted prices/cổ tức/chia tách. Các chỉ tiêu là lợi suất **giá được cung cấp**, không phải total return. Danh sách công ty có thể có survivorship bias và không đại diện đầy đủ thành phần S&P 500 qua từng thời điểm. Bộ lọc độ phủ cũng có thể tạo thiên lệch chọn mẫu. Không có dữ liệu cơ bản, thuế, phí giao dịch, lãi suất phi rủi ro hoặc backtest. Kết quả là mô tả lịch sử và gợi ý nghiên cứu, không phải khuyến nghị mua/bán.
 
-**Tái lập:** chạy `run.ps1`; tham số trong `analysis_config.py`; bảng CSV trong `outputs/tables`, hình PNG trong `outputs/figures`. Dữ liệu gốc được giữ nguyên.
+**Tái lập:** chạy `run.ps1`; tham số trong `src/analysis_config.py`; bảng CSV trong `outputs/tables`, hình PNG trong `outputs/figures`. Dữ liệu gốc được giữ nguyên.
+
+## 7. Thử nghiệm học máy: chiều giá phiên kế tiếp
+
+**Câu hỏi:** Dữ liệu OHLCV đã biết cuối phiên `t` có giúp dự đoán close phiên kế tiếp cùng mã tăng (`1`) hay không tăng (`0`) không? Đây là phân loại chiều giá, không dự báo mức giá.
+
+Nhãn chỉ gắn khi có phiên liền kề cùng mã. Năm đặc trưng: daily return hiện tại, `(high-low)/open`, `(close-open)/open`, volume hiện tại, thay đổi volume so với phiên trước. Không dùng dữ liệu `t+1` trong đặc trưng. Không lọc mã theo kết quả CAGR hoặc độ phủ của cả kỳ. Train dùng mẫu có cả `t` và ngày nhãn trong 2014–2016; test dùng cả hai trong 2017. Scaler chỉ fit trên train. Random Forest dùng đặc trưng gốc.
+
+Tập train có **370,378 mẫu**, tỷ lệ tăng **51.62%**; test có **125,520 mẫu**, tỷ lệ tăng **52.75%**. Xem `tables/ml_sample_audit.csv` để biết số mẫu loại theo lý do. Baseline luôn đoán nhãn đa số của train.
+
+![So sánh chỉ số ML](figures/ml_metric_comparison.png)
+
+| Mô hình | Train | Test | Accuracy | Precision 1 | Recall 1 | F1 1 | ROC-AUC |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| baseline_majority | 370,378 | 125,520 | 0.5275 | 0.5275 | 1.0000 | 0.6906 | N/A |
+| logistic_regression | 370,378 | 125,520 | 0.5271 | 0.5281 | 0.9730 | 0.6846 | 0.5123 |
+| random_forest | 370,378 | 125,520 | 0.5036 | 0.5317 | 0.4942 | 0.5123 | 0.5058 |
+
+![Confusion matrix theo mô hình](figures/ml_confusion_matrices.png)
+
+So với baseline, Accuracy của Logistic Regression chênh **-0.0004**, Random Forest chênh **-0.0239** (đơn vị tỷ lệ). Trong lần kiểm tra này, cả hai mô hình đều không vượt baseline về Accuracy. Baseline luôn đoán lớp tăng vì đó là nhãn đa số train; Recall lớp tăng bằng 1 theo cách đoán này nên F1 cao không tự chứng minh khả năng phân biệt hai lớp. Bảng `tables/ml_confusion_matrices.csv` có TN/FP/FN/TP; `tables/ml_test_predictions.csv` cho phép đối chiếu từng mẫu test. F1 được tính từ Precision/Recall, quy ước 0 khi mẫu số bằng 0. ROC-AUC dùng xác suất lớp tăng và chỉ có ý nghĩa khi test có cả hai lớp; baseline để N/A.
+
+## 8. Storytelling kết hợp và giới hạn ML
+
+Phần phân tích lịch sử cho thấy hiệu suất và biến động khác nhau giữa các mã. Thử nghiệm ML hỏi một câu khác: có dự đoán được **chiều** close phiên sau từ thông tin hiện tại hay không. So sánh với baseline và xem đồng thời Accuracy, Precision, Recall, F1 giúp tránh kết luận từ một chỉ số đơn lẻ. Dù mô hình có vượt baseline, điều đó không chứng minh có chiến lược giao dịch sinh lời. Dữ liệu chỉ đến 2017, giá có thể chưa điều chỉnh chia tách/cổ tức, mẫu công ty có thể thiên lệch, và bài không có phí, thuế, trượt giá hay backtest. Không diễn giải hệ số hay biến quan trọng như quan hệ nhân quả.
+

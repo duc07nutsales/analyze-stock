@@ -1,22 +1,12 @@
-# Phân tích S&P 500 — 2014–2017
+# Phân tích dữ liệu S&P 500 (2014–2017)
 
-Bài phân tích dữ liệu bằng Python: làm sạch, tính lợi suất–rủi ro, phân nhóm theo quy tắc, trực quan hóa và storytelling. **Không có học máy**, theo lựa chọn của người dùng ngày 26/10/2026.
+Bài làm đọc dữ liệu giá cổ phiếu, kiểm toán và làm sạch, tính lợi suất/rủi ro, phân nhóm theo quy tắc, vẽ biểu đồ và viết báo cáo có diễn giải. Phần học máy tùy chọn thử dự đoán chiều giá phiên kế tiếp và so sánh với cách dự đoán đơn giản.
 
-Giải thích luồng xử lý và vai trò của mọi file/thư mục: [README_LUONG_HOAT_DONG.md](README_LUONG_HOAT_DONG.md).
-
-## File chính
-
-- `sp500_analysis.py`: script đầy đủ, các phần có đánh dấu `# %%` để đọc/chạy theo phần trong VS Code.
-- `sp500_analysis.ipynb`: notebook chứa code và kết quả đã chạy; mở bằng Jupyter hoặc VS Code, chọn Python `.venv` rồi Run All.
-- `analysis_config.py`: đường dẫn CSV/output, ngưỡng độ phủ 95%, cờ biến động 20%.
-- `outputs/report.md`: báo cáo có kết quả thực, bảng tóm tắt, hình và storytelling.
-- `outputs/tables/`: CSV kiểm toán, dữ liệu sạch, lợi suất, chỉ tiêu, phân nhóm và mã được chọn.
-- `outputs/figures/`: 5 hình PNG.
-- `test_analysis.py`: kiểm thử phát triển cho công thức, làm sạch, khoảng thiếu phiên, tách mã và ngưỡng nhóm.
+Đề gốc: [de_bai.md](docs/de_bai.md). Giải thích từng thư mục và quan hệ giữa các file: [CAU_TRUC_DU_AN.md](docs/CAU_TRUC_DU_AN.md). Xem [luồng hoạt động](docs/README_LUONG_HOAT_DONG.md), [phương pháp](docs/METHODOLOGY.md), [kế hoạch học máy](docs/README_KE_HOACH_HOC_MAY.md) và [bài tổng hợp](docs/TONG_HOP_DU_AN.md).
 
 ## Chạy trên Windows
 
-Mở PowerShell trong thư mục project. Lần đầu:
+Mở PowerShell ở thư mục gốc dự án. Lần đầu hoặc khi cần cài thư viện:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\run.ps1 -Install
@@ -28,33 +18,20 @@ Những lần sau:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\run.ps1
 ```
 
-`ExecutionPolicy Bypass` chỉ áp dụng cho tiến trình chạy lệnh, không đổi thiết lập hệ thống. Runner tạo môi trường `.venv` nếu cần, tạo thư mục đầu ra và dùng backend Matplotlib không mở cửa sổ. Việc cài thư viện cần Internet; phân tích chỉ dùng CSV cục bộ.
-
-Chạy trực tiếp khi đã có môi trường và thư mục đầu ra:
+Runner chuẩn bị `.venv`, thư mục kết quả và chạy module `src.sp500_analysis`. Phân tích chỉ đọc CSV cục bộ trong `data/`. Có thể chạy trực tiếp từ **thư mục gốc** khi đã cài môi trường:
 
 ```powershell
-.\.venv\Scripts\python.exe sp500_analysis.py
-.\.venv\Scripts\python.exe test_analysis.py
+.\.venv\Scripts\python.exe -m src.sp500_analysis
+powershell -NoProfile -ExecutionPolicy Bypass -File .\test.ps1
 ```
 
-Luôn chạy từ thư mục project. Các kết quả trong `outputs` được ghi lại khi chạy; CSV gốc giữ nguyên. `requirements.txt` liệt kê thư viện; `requirements-lock.txt` ghi phiên bản của môi trường đã kiểm tra. Python đã dùng: 3.14.8. Không cần scikit-learn cho bản không ML.
+Mở [notebook](notebooks/sp500_analysis.ipynb) bằng VS Code/Jupyter, chọn kernel `.venv` và **Run All** để xem từng phần. Notebook đọc dữ liệu từ `data/`, dùng cấu hình `src/analysis_config.py` và ghi vào `outputs/`. Chạy script không cập nhật các output đã lưu trong notebook; Run All và Save sẽ cập nhật chúng. Phần Markdown báo cáo cuối notebook là bản chụp, còn báo cáo mới nhất do lần chạy tạo ra ở [outputs/report.md](outputs/report.md).
 
-Notebook yêu cầu cùng CSV và `analysis_config.py`, cùng các thư mục `outputs/tables`, `outputs/figures` (runner chuẩn bị sẵn). Đổi cấu hình thì restart kernel và Run All. Script chạy lại không cập nhật các output đã lưu trong notebook; Run All và Save notebook để cập nhật chúng.
+## Đọc kết quả
 
-## Cách đọc kết quả
+- [Báo cáo chính](outputs/report.md): số liệu, biểu đồ, diễn giải và storytelling.
+- [Bảng dữ liệu](outputs/tables/): kiểm toán, dữ liệu sạch, chỉ tiêu, nhóm và đánh giá ML.
+- [Biểu đồ](outputs/figures/): năm hình phân tích và hai hình đánh giá ML.
+- [Bản ghi kiểm chứng](outputs/validation.md): kết quả kiểm tra của phiên bản đã thực hiện, không tự cập nhật khi chạy lại.
 
-`quality_summary.csv` đếm cờ lỗi có thể chồng lấn; `cleaning_steps.csv` là số loại tuần tự không đếm lặp. `excluded_rows.csv` giữ dòng bị cách ly và lý do; `source_row` là số dòng CSV tính cả header.
-
-`clean_prices.csv` phục vụ phân tích close, không khẳng định tất cả OHLCV đều hoàn chỉnh. `complete_ohlcv` đánh dấu khả năng dùng các trường khác. `daily_returns.csv` phân biệt lợi suất một phiên (`daily_return`) và lợi suất giữa hai quan sát (`observed_return`); khoảng thiếu phiên không được dùng như lợi suất ngày.
-
-`stock_metrics_all.csv` có 505 mã, kể cả mã không đạt độ phủ. Chỉ `stock_groups.csv` (483 mã) được dùng so sánh cùng kỳ. `selected_stocks.csv` có 8 mã, lý do chọn, độ phủ và khoảng ngày. `group_thresholds.csv` công bố ngưỡng số thực đầy đủ.
-
-Kết quả lần chạy đã kiểm tra: 497.472 dòng gốc; cách ly 12 dòng OHLC mâu thuẫn, còn 497.460 dòng. Nhóm A/B/C/D có lần lượt 180/77/119/107 mã. Các số này là kết quả quan sát, không phải hằng số ép vào thuật toán.
-
-## Phạm vi kiến thức và giới hạn
-
-Hàm phân tích dùng NumPy, Pandas, Matplotlib và Python cơ bản có trong `allowed_knowledge_reference.md`; không dùng `.shift()`, `.pct_change()`, `.rolling()`, `.sort_values()` hoặc clustering. Sắp xếp bằng `set_index` → `sort_index` → `reset_index`; dùng mảng và phép toán cho lợi suất. Không sửa danh sách kiến thức gốc.
-
-PowerShell, Jupyter và bộ kiểm thử là hạ tầng chạy/kiểm chứng, không phải phương pháp phân tích bổ sung. Phương pháp, công thức và các lựa chọn được ghi trong `METHODOLOGY.md`. Notebook chứa phần code phân tích; script không cần thư viện Jupyter để tính kết quả.
-
-Giá chưa được xác nhận điều chỉnh cổ tức/chia tách. Kết quả là lợi suất giá lịch sử, không phải total return hay khuyến nghị đầu tư. Không bổ sung dữ liệu bên ngoài, không backtest và không suy diễn quan hệ nhân quả.
+Kết quả trên dữ liệu hiện có: 497.472 dòng gốc, 497.460 dòng sạch, 483 mã đủ điều kiện phân nhóm. Trong thử nghiệm ML, Accuracy của baseline là 52,75%, Logistic Regression 52,71% và Random Forest 50,36%; hai mô hình chưa vượt baseline theo chỉ số này. Các con số có thể thay đổi nếu thay dữ liệu hoặc cấu hình.

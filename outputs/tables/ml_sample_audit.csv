@@ -1,0 +1,3 @@
+﻿period,cross_period_boundary,included,incomplete_current_ohlcv,invalid_previous_volume,no_adjacent_previous,no_adjacent_target
+test_2017,0,125520,1,0,6,505
+train_2014_2016,499,370378,8,4,519,20

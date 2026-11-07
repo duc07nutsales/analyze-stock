@@ -1,9 +1,13 @@
 # REQUIREMENTS — S&P 500 Stock Prices (2014–2017)
 
-**Phiên bản:** 1.1 — bắt đầu triển khai theo yêu cầu ngày 26/10/2026  
-**Trạng thái:** Đã triển khai và chạy script Python cùng notebook trên toàn bộ CSV; phạm vi không ML.  
+**Phiên bản:** 1.2 — bổ sung phạm vi ML theo yêu cầu ngày 06/11/2026  
+**Trạng thái:** Đã triển khai ML tùy chọn, chạy script và notebook trên CSV; kết quả được kiểm tra theo bảng đầu ra.  
 
 **Phạm vi đã xác nhận ngày 26/10/2026:** Người dùng chọn **chỉ phân tích và phân nhóm**, không triển khai học máy. Các mục ML bên dưới chỉ lưu thiết kế mở rộng, không phải đầu ra phải nộp của phiên bản này. Tên báo cáo triển khai: *Phân tích lợi suất và rủi ro cổ phiếu S&P 500 giai đoạn 2014–2017*.
+
+**Cập nhật ngày 06/11/2026:** Người dùng yêu cầu rà soát kế hoạch tại `docs/README_KE_HOACH_HOC_MAY.md` rồi triển khai nếu hợp lý. Kế hoạch đã được rà soát và chốt để triển khai; yêu cầu D-04 trở thành đầu ra của phiên bản 1.2. Chỉ dùng dữ liệu hiện có, hai mô hình Logistic Regression/Random Forest và baseline, chia train/test theo thời gian, không chọn 483 mã theo độ phủ cả kỳ làm tập ML. Mục 7 “chưa chốt ML” là ghi chép lịch sử.
+
+**Nghiệm thu ML v1.2:** 370.378 mẫu train, 125.520 mẫu test. Logistic Regression và Random Forest đều đã fit trên toàn bộ train; bảng metrics, confusion matrix, dự đoán từng mẫu test, 2 hình và báo cáo đã xuất. Accuracy test lần lượt 52,71% và 50,36%, thấp hơn baseline đa số 52,75%. Notebook đã chạy không có output lỗi. Mục D-04 được đánh dấu hoàn thành theo phạm vi triển khai, không hàm ý mô hình có hiệu quả đầu tư.
 **Tài liệu liên quan:** `SP500_PROJECT_PLAN.md`, `METHODOLOGY.md`, `allowed_knowledge_reference.md`, `de_bai.md`.
 
 ## 1. Phạm vi và mục tiêu
@@ -41,7 +45,7 @@
 | P-07 | Phân nhóm theo quy tắc (không dùng K-Means/PCA) | 4 nhóm theo CAGR/volatility; bảng nhóm và scatter | Đã hoàn thành |
 | P-08 | Phân tích sâu 5–10 mã được chọn theo quy tắc công bố trước | Bảng lý do chọn mã và biểu đồ so sánh | Đã hoàn thành |
 | P-09 | Viết storytelling và hàm ý sàng lọc, không khẳng định lợi nhuận tương lai | Kết luận đối chiếu số liệu, nêu hạn chế | Đã hoàn thành |
-| P-10 | Nếu chọn làm ML: dự đoán tăng/không tăng phiên tiếp theo | Logistic Regression, Random Forest, baseline, đánh giá out-of-time | **Có điều kiện** |
+| P-10 | ML: dự đoán tăng/không tăng phiên tiếp theo | Logistic Regression, Random Forest, baseline, đánh giá out-of-time | **Đã hoàn thành** |
 
 ## 4. Yêu cầu kỹ thuật / giới hạn bắt buộc (T)
 
@@ -80,11 +84,11 @@
 - [x] Ghi rõ đây **không phải phân cụm học máy**.
 
 ### Deliverable D-04 — ML (chỉ khi chọn phạm vi mở rộng)
-- [ ] Nhãn dự đoán ngày tiếp theo theo cùng mã; loại các dòng không thể gắn nhãn.
-- [ ] Train theo giai đoạn trước và test theo giai đoạn sau, tránh nhãn train vượt ranh giới.
-- [ ] Có mô hình Logistic Regression và Random Forest, cùng baseline xác lập từ train.
-- [ ] Có bảng Accuracy, Precision, Recall, F1 tự tính, Confusion Matrix; ROC-AUC khi có xác suất phù hợp.
-- [ ] Nêu rõ giới hạn của kết quả dự đoán.
+- [x] Nhãn dự đoán ngày tiếp theo theo cùng mã; loại các dòng không thể gắn nhãn.
+- [x] Train theo giai đoạn trước và test theo giai đoạn sau, tránh nhãn train vượt ranh giới.
+- [x] Có mô hình Logistic Regression và Random Forest, cùng baseline xác lập từ train.
+- [x] Có bảng Accuracy, Precision, Recall, F1 tự tính, Confusion Matrix; ROC-AUC khi có xác suất phù hợp.
+- [x] Nêu rõ giới hạn của kết quả dự đoán.
 
 ### Deliverable D-05 — Báo cáo tổng hợp
 - [x] Có câu hỏi nghiên cứu → phương pháp → output → diễn giải ở từng phần.

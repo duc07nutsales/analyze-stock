@@ -6,7 +6,7 @@ Không ghi đè outputs: thay hàm lưu CSV bằng bộ thu bảng trong bộ nh
 
 import numpy as np
 import pandas as pd
-import sp500_analysis as analysis
+from src import sp500_analysis as analysis
 
 
 def test_return_semantics():
