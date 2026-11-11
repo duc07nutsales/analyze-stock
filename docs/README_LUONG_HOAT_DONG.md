@@ -3,7 +3,7 @@
 Xem [cấu trúc thư mục](CAU_TRUC_DU_AN.md) để biết mỗi file nằm ở đâu và dùng để làm gì. [README.md](../README.md) có lệnh chạy ngắn; [TONG_HOP_DU_AN.md](TONG_HOP_DU_AN.md) trình bày phương pháp và kết quả đầy đủ.
 
 ```text
-data/CSV + src/analysis_config.py
+data/CSV + tham số đầu src/sp500_analysis.py
                 ↓
 src/sp500_analysis.py
   1. Đọc CSV, kiểm toán thiếu/trùng/giá không hợp lệ
@@ -12,7 +12,7 @@ src/sp500_analysis.py
   4. Chọn mã đủ điều kiện và phân bốn nhóm theo quy tắc
   5. Vẽ năm biểu đồ, viết phần phân tích mô tả
                 ↓
-src/sp500_ml.py
+src/sp500_analysis.py (phần học máy)
   6. Tạo đặc trưng và nhãn cho phiên kế tiếp của cùng mã
   7. Train bằng 2014–2016; test trên 2017
   8. So sánh Logistic Regression, Random Forest với baseline
@@ -20,7 +20,7 @@ src/sp500_ml.py
 outputs/tables/ + outputs/figures/ + outputs/report.md
 ```
 
-`run.ps1` chuyển về thư mục gốc dự án, chuẩn bị môi trường và gọi `src.sp500_analysis`. Module chính gọi `src.sp500_ml` sau khi hoàn thành phần mô tả. Notebook trong `notebooks/` cho phép xem và chạy từng phần của cùng quy trình; chọn **Run All** khi đã mở project từ thư mục gốc.
+`run.ps1` chuyển về thư mục gốc dự án, chuẩn bị môi trường và gọi `src.sp500_analysis`. File này chạy phần học máy sau phân tích mô tả. Notebook trong `notebooks/` cho phép xem và chạy từng phần của cùng quy trình; chọn **Run All** khi đã mở project từ thư mục gốc.
 
 ## Ý nghĩa từng giai đoạn
 

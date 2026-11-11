@@ -107,7 +107,7 @@ Biểu đồ dự kiến: cột so sánh các chỉ số chính và confusion ma
 
 | File/thư mục | Việc sẽ làm |
 | --- | --- |
-| `sp500_ml.py` | Module riêng tạo mẫu, chia tập, huấn luyện và đánh giá; dùng chung dữ liệu đã làm sạch của bài hiện tại. |
+| `src/sp500_analysis.py` | Một file gồm làm sạch, phân tích, tạo mẫu, huấn luyện và đánh giá ML. |
 | `sp500_analysis.ipynb` | Thêm phần học máy sau phân tích và phân nhóm, trình bày câu hỏi, code, bảng, biểu đồ và diễn giải. |
 | `outputs/tables/ml_sample_audit.csv` | Số mẫu tạo được/bị loại và lý do theo train/test. |
 | `outputs/tables/ml_metrics.csv` | Baseline và hai mô hình trên cùng test; kèm số mẫu và chỉ số. |

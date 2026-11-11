@@ -25,7 +25,7 @@ Runner chuẩn bị `.venv`, thư mục kết quả và chạy module `src.sp500
 powershell -NoProfile -ExecutionPolicy Bypass -File .\test.ps1
 ```
 
-Mở [notebook](notebooks/sp500_analysis.ipynb) bằng VS Code/Jupyter, chọn kernel `.venv` và **Run All** để xem từng phần. Notebook đọc dữ liệu từ `data/`, dùng cấu hình `src/analysis_config.py` và ghi vào `outputs/`. Chạy script không cập nhật các output đã lưu trong notebook; Run All và Save sẽ cập nhật chúng. Phần Markdown báo cáo cuối notebook là bản chụp, còn báo cáo mới nhất do lần chạy tạo ra ở [outputs/report.md](outputs/report.md).
+Mở [notebook](notebooks/sp500_analysis.ipynb) bằng VS Code/Jupyter, chọn kernel `.venv` và **Run All** để xem từng phần. Notebook đọc dữ liệu từ `data/`, dùng tham số ở đầu `src/sp500_analysis.py` và ghi vào `outputs/`. Chạy script không cập nhật các output đã lưu trong notebook; Run All và Save sẽ cập nhật chúng. Phần Markdown báo cáo cuối notebook là bản chụp, còn báo cáo mới nhất do lần chạy tạo ra ở [outputs/report.md](outputs/report.md).
 
 ## Đọc kết quả
 

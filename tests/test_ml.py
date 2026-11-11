@@ -2,7 +2,7 @@
 
 import numpy as np
 import pandas as pd
-from src import sp500_ml as ml
+from src import sp500_analysis as ml
 
 
 def test_samples():

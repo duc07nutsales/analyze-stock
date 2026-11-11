@@ -111,7 +111,7 @@ Bốn nhóm là một cách tổ chức kết quả để sàng lọc nghiên c�
 
 **Giới hạn:** dữ liệu chỉ giai đoạn 2014–2017; không có thông tin xác nhận adjusted prices/cổ tức/chia tách. Các chỉ tiêu là lợi suất **giá được cung cấp**, không phải total return. Danh sách công ty có thể có survivorship bias và không đại diện đầy đủ thành phần S&P 500 qua từng thời điểm. Bộ lọc độ phủ cũng có thể tạo thiên lệch chọn mẫu. Không có dữ liệu cơ bản, thuế, phí giao dịch, lãi suất phi rủi ro hoặc backtest. Kết quả là mô tả lịch sử và gợi ý nghiên cứu, không phải khuyến nghị mua/bán.
 
-**Tái lập:** chạy `run.ps1`; tham số trong `src/analysis_config.py`; bảng CSV trong `outputs/tables`, hình PNG trong `outputs/figures`. Dữ liệu gốc được giữ nguyên.
+**Tái lập:** chạy `run.ps1`; tham số ở đầu `src/sp500_analysis.py`; bảng CSV trong `outputs/tables`, hình PNG trong `outputs/figures`. Dữ liệu gốc được giữ nguyên.
 
 ## 7. Thử nghiệm học máy: chiều giá phiên kế tiếp
 

@@ -13,9 +13,7 @@ python_analyze_stock/
 │   └── S&P 500 Stock Prices 2014-2017.csv   Dữ liệu gốc
 ├── src/
 │   ├── __init__.py                   Đánh dấu gói mã nguồn
-│   ├── analysis_config.py            Đường dẫn và tham số
-│   ├── sp500_analysis.py             Quy trình phân tích chính
-│   └── sp500_ml.py                   Thử nghiệm học máy
+│   └── sp500_analysis.py             Toàn bộ code xử lý và tham số
 ├── notebooks/
 │   └── sp500_analysis.ipynb          Báo cáo có code và kết quả từng bước
 ├── tests/
@@ -41,8 +39,8 @@ python_analyze_stock/
 
 | Thư mục | Chứa gì và dùng để làm gì | Liên quan đến thư mục khác |
 | --- | --- | --- |
-| [data/](../data/) | CSV giá gốc, giữ nguyên để có thể chạy lại và đối chiếu. | `src/sp500_analysis.py` đọc file này theo đường dẫn trong `src/analysis_config.py`. |
-| [src/](../src/) | Mã phân tích và cấu hình. `sp500_analysis.py` làm sạch, tính chỉ tiêu, phân nhóm, vẽ hình, viết báo cáo; sau đó gọi `sp500_ml.py` để đánh giá mô hình. | Đọc `data/`, ghi `outputs/`; được `run.ps1`, notebook và `tests/` sử dụng. |
+| [data/](../data/) | CSV giá gốc, giữ nguyên để có thể chạy lại và đối chiếu. | `src/sp500_analysis.py` đọc file này theo đường dẫn khai báo ở đầu file. |
+| [src/](../src/) | Một file xử lý `sp500_analysis.py`: tham số, làm sạch, tính chỉ tiêu, phân nhóm, vẽ hình, viết báo cáo và học máy. `__init__.py` chỉ đánh dấu gói Python. | Đọc `data/`, ghi `outputs/`; được `run.ps1`, notebook và `tests/` sử dụng. |
 | [notebooks/](../notebooks/) | Notebook trình bày từng phần code cùng bảng/hình đã chạy. | Dùng cùng CSV, cấu hình và thư mục đầu ra với script; cần mở từ gốc dự án để đường dẫn tương đối hoạt động. |
 | [tests/](../tests/) | Các trường hợp dữ liệu nhỏ kiểm tra ý nghĩa công thức, làm sạch, ranh giới thời gian và chỉ số ML. | Import hàm từ `src/`; không phải đầu vào của phân tích chính. |
 | [docs/](./) | Đề bài, giới hạn kiến thức, yêu cầu, phương pháp, kế hoạch và giải thích kết quả. | Giải thích các quyết định trong `src/` và cách đọc `outputs/`. |
@@ -55,14 +53,14 @@ python_analyze_stock/
 ```text
 docs/de_bai.md + docs/allowed_knowledge_reference.md
                     ↓ quy định phạm vi
-data/CSV → src/sp500_analysis.py → src/sp500_ml.py
-                    ↓                    ↓
-              outputs/tables/ + outputs/figures/
-                              ↓
-                       outputs/report.md
+data/CSV → src/sp500_analysis.py
+                    ↓
+       outputs/tables/ + outputs/figures/
+                    ↓
+             outputs/report.md
 ```
 
-`src/analysis_config.py` cung cấp tên file dữ liệu, nơi lưu kết quả và tham số cho cả hai module. Notebook là cách xem và chạy lần lượt các bước; file `outputs/report.md` là báo cáo được sinh từ dữ liệu hiện tại. `docs/TONG_HOP_DU_AN.md` là bản tổng hợp đã viết cho phiên bản được kiểm tra, nên không tự thay đổi khi chạy lại chương trình.
+Các tham số ở đầu `src/sp500_analysis.py` cung cấp tên file dữ liệu, nơi lưu kết quả và ngưỡng phân tích. Notebook là cách xem và chạy lần lượt các bước; file `outputs/report.md` là báo cáo được sinh từ dữ liệu hiện tại. `docs/TONG_HOP_DU_AN.md` là bản tổng hợp đã viết cho phiên bản được kiểm tra, nên không tự thay đổi khi chạy lại chương trình.
 
 ## File tự sinh
 

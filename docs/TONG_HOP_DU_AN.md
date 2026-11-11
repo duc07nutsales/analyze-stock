@@ -165,7 +165,7 @@ Kỳ so sánh chung là **02/01/2014–29/12/2017**. Một mã chỉ được x�
 3. Có daily return hợp lệ ở ít nhất 95% trong 1.006 cặp phiên liên tiếp.
 4. CAGR và volatility hữu hạn, đủ dữ liệu để tính.
 
-Ngưỡng 95% là lựa chọn phương pháp được công bố trong `analysis_config.py`, không phải yêu cầu bắt buộc của giảng viên.
+Ngưỡng 95% là lựa chọn phương pháp được công bố ở đầu `src/sp500_analysis.py`, không phải yêu cầu bắt buộc của giảng viên.
 
 Kết quả: **483 mã đạt**, **22 mã không đạt**. Bảng `stock_metrics_all.csv` vẫn có chỉ tiêu theo kỳ riêng và lý do không đạt của các mã còn lại; không đưa chúng vào bảng xếp hạng chung. Không tự hạ ngưỡng để buộc mọi mã được chọn.
 
@@ -270,7 +270,7 @@ Xem [sơ đồ cấu trúc và vai trò từng thư mục](CAU_TRUC_DU_AN.md).
 project/
 ├── README.md, run.ps1, requirements*.txt
 ├── data/           CSV gốc
-├── src/            Cấu hình, phân tích, học máy
+├── src/            Một file xử lý và tham số
 ├── notebooks/      Notebook đã chạy
 ├── tests/          Kiểm thử dữ liệu nhỏ
 ├── docs/           Đề bài, phương pháp, kế hoạch, tổng hợp
@@ -305,7 +305,7 @@ project/
 
 ### 14.1. Cấu hình
 
-Trong `analysis_config.py`:
+Ở đầu `src/sp500_analysis.py`:
 
 ```python
 DATA_FILE = "data/S&P 500 Stock Prices 2014-2017.csv"
@@ -348,7 +348,7 @@ Các file đầu ra cùng tên được ghi lại sau mỗi lần chạy. Nếu 
 
 1. Mở `notebooks/sp500_analysis.ipynb` bằng VS Code hoặc Jupyter từ thư mục project.
 2. Chọn Python/kernel thuộc `.venv`.
-3. CSV ở `data/`, cấu hình ở `src/analysis_config.py`; bảo đảm có `outputs/tables/` và `outputs/figures/`.
+3. CSV ở `data/`, tham số ở đầu `src/sp500_analysis.py`; bảo đảm có `outputs/tables/` và `outputs/figures/`.
 4. Chọn **Run All** rồi lưu notebook.
 5. Nếu đổi cấu hình, restart kernel trước khi Run All.
 
@@ -369,7 +369,7 @@ Một lỗi số thực ở trường hợp bằng ngưỡng đã được phát
 - Kiểm tra lợi suất không nối qua mã hoặc khoảng thiếu phiên.
 - Kiểm tra tổng số mã các nhóm bằng 483 và tám mã được chọn không trùng.
 - Đối chiếu các lời gọi API của script với danh sách cho phép.
-- Kiểm tra notebook đồng bộ bảy phần code với script/module ML, chạy không có output lỗi và chứa bảy hình nhúng; phần ML được kiểm tra riêng bằng `test_ml.py`.
+- Kiểm tra notebook đồng bộ bảy phần code với file script duy nhất, chạy không có output lỗi và chứa bảy hình nhúng; phần ML được kiểm tra riêng bằng `tests/test_ml.py`.
 - Xem trực tiếp cả năm PNG; kiểm tra chữ tiếng Việt, nhãn, đơn vị, bố cục và nhãn năm.
 
 SHA-256 của CSV gốc trước/sau giữ nguyên:
@@ -430,11 +430,9 @@ Bảng chi tiết nằm trong `outputs/tables/ml_sample_audit.csv`, `ml_metrics.
 ## 19. Liên kết để kiểm tra lại
 
 - [Script Python](../src/sp500_analysis.py)
-- [Module ML](../src/sp500_ml.py)
 - [Notebook có kết quả](../notebooks/sp500_analysis.ipynb)
 - [Báo cáo sinh từ script](../outputs/report.md)
 - [Ghi nhận kiểm chứng](../outputs/validation.md)
-- [Cấu hình](../src/analysis_config.py)
 - [Phương pháp chi tiết](METHODOLOGY.md)
 - [Đề bài](de_bai.md)
 - [Danh sách kiến thức cho phép](allowed_knowledge_reference.md)

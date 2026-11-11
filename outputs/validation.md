@@ -6,7 +6,7 @@
 - Daily return không nối qua mã hoặc khoảng thiếu phiên; observed_return giữ biến động giữa hai quan sát.
 - 483 mã đạt điều kiện, tổng bốn nhóm khớp; 8 mã được chọn không trùng.
 - Đã đối chiếu các lời gọi API của sp500_analysis.py với danh sách hàm cho phép; không có API ngoài danh sách kiểm tra.
-- Notebook đồng bộ 6 phần mô tả với script và phần ML với module; tất cả cell đã chạy, không có output lỗi, có 7 hình nhúng.
+- Notebook đồng bộ 7 phần code với script duy nhất; tất cả cell đã chạy, không có output lỗi, có 7 hình nhúng.
 - Đã xem trực tiếp 7 PNG: nhãn, đơn vị và chữ tiếng Việt rõ; biểu đồ giá dùng tick theo năm.
 - Bộ fixture test_analysis.py kiểm tra công thức, một quan sát, khoảng thiếu phiên, thiếu OHL/volume, trùng hoàn toàn, khóa xung đột, giá lỗi, ngày lỗi, mã trắng và hòa ngưỡng.
 
