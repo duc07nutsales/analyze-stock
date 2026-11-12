@@ -6,9 +6,34 @@ Mở đường link Google Colab được chia sẻ và đăng nhập tài kho�
 
 ## 2. Chạy chương trình
 
-Chọn **Connect (Kết nối)** ở góc trên bên phải, sau đó chọn **Runtime → Run all (Chạy tất cả)**.
+Chọn **Connect (Kết nối)** ở góc trên bên phải. Sau khi project đã có trong thư mục `/content/analyze-stock`, notebook cần có hai ô code sau, theo đúng thứ tự. Nếu người chia sẻ đã thêm sẵn thì không cần thêm lại.
 
-Các ô lệnh sẽ chạy lần lượt để chuẩn bị dữ liệu, cài thư viện và thực hiện phân tích. Chờ tất cả các ô chạy xong; quá trình có thể mất vài phút.
+**Ô 1 — mở thư mục project và cài thư viện:**
+
+```python
+%cd /content/analyze-stock
+%pip install -r requirements.txt
+```
+
+**Ô 2 — tạo thư mục kết quả và chạy file Python:**
+
+```python
+%cd /content/analyze-stock
+
+import os
+from pathlib import Path
+
+for folder in ["outputs/tables", "outputs/figures"]:
+    Path(folder).mkdir(parents=True, exist_ok=True)
+
+os.environ["MPLBACKEND"] = "Agg"
+
+!python -u -m src.sp500_analysis
+```
+
+Chọn **Runtime → Run all (Chạy tất cả)** để chạy các ô theo thứ tự. Lệnh cuối của ô 2 gọi file `src/sp500_analysis.py`. Run all chỉ chạy các ô trong notebook, không tự chạy những file đang mở ở bảng Files.
+
+Chờ tất cả các ô chạy xong; quá trình có thể mất vài phút.
 
 Khi hoàn tất, chương trình hiển thị:
 
