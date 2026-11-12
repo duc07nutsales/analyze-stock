@@ -59,7 +59,43 @@ def test_metrics():
     assert np.isnan(baseline["roc_auc"])
 
 
+def test_supplemental_metrics():
+    captured = {}
+    original = ml.save_ml_table
+    ml.save_ml_table = lambda frame, name: captured.update({name: frame.copy()})
+    y = np.array([0, 1, 0, 1])
+    predictions = pd.DataFrame({
+        "label": y, "target_date": ["2017-01-03", "2017-01-03", "2017-01-04", "2017-01-04"],
+        "baseline_prediction": [1, 1, 1, 1], "logistic_prediction": [0, 1, 0, 0],
+        "forest_prediction": [1, 1, 1, 1],
+    })
+    rows, matrices = [], []
+    for name, field in zip(["baseline_majority", "logistic_regression", "random_forest"],
+                           ["baseline_prediction", "logistic_prediction", "forest_prediction"]):
+        row, counts = ml.evaluate_predictions(name, y, np.array(predictions[field]), None, 10, 6)
+        rows.append(row)
+        matrices.append(counts)
+    result, normalized = ml.build_ml_supplements(pd.DataFrame(rows), pd.DataFrame(matrices), predictions)
+    logistic = result[result["model"] == "logistic_regression"]
+    assert int(np.array(logistic["correct_predictions"])[0]) == 3
+    assert int(np.array(logistic["correct_difference_vs_baseline"])[0]) == 1
+    assert np.array(logistic["balanced_accuracy"])[0] == 0.75
+    assert np.array(logistic["specificity_0"])[0] == 1.0
+    assert abs(np.array(logistic["accuracy_se_iid"])[0] - np.sqrt(0.75 * 0.25 / 4)) < 1e-12
+    assert np.array(logistic["accuracy_se_date_cluster"])[0] == 0.25
+    assert np.array(logistic["accuracy_difference_se_date_cluster"])[0] == 0.25
+    assert int(np.array(logistic["target_dates"])[0]) == 2
+    baseline = result[result["model"] == "baseline_majority"]
+    assert np.array(baseline["accuracy_difference_se_date_cluster"])[0] == 0
+    assert np.array(logistic["accuracy_ci95_iid_high"])[0] == 1.0
+    for _, part in normalized.groupby(["model", "actual_label"]):
+        assert abs(part["row_normalized_rate"].sum() - 1) < 1e-12
+    assert len(captured["ml_daily_evaluation"]) == 6
+    ml.save_ml_table = original
+
+
 if __name__ == "__main__":
     test_samples()
     test_metrics()
+    test_supplemental_metrics()
     print("PASS: nhãn, phiên liền kề, ranh giới train/test, volume và chỉ số ML.")

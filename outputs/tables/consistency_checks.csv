@@ -1,0 +1,7 @@
+﻿check,actual,expected,absolute_difference,passed
+all_symbols,505.0,505.0,0.0,True
+group_symbols,483.0,483.0,0.0,True
+raw_equals_clean_plus_excluded,497472.0,497472.0,0.0,True
+weighted_cagr_threshold,0.0939698888602149,0.09396988886021491,1.3877787807814457e-17,True
+weighted_volatility_threshold,0.015402734017380765,0.015402734017380766,1.734723475976807e-18,True
+ml_used_plus_excluded_equals_clean,497460.0,497460.0,0.0,True

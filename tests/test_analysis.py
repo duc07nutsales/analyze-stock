@@ -83,7 +83,36 @@ def test_cleaning_and_groups():
     analysis.save_table = original_save
 
 
+def test_supplemental_tables():
+    saved = {}
+    original = analysis.save_table
+    analysis.save_table = lambda frame, name: saved.update({name: frame.copy()})
+    sample = pd.DataFrame({
+        "symbol": ["A", "B"], "eligible": [True, True], "cagr": [0.1, 0.3],
+        "daily_volatility": [0.0, 0.02], "start_date": ["2016-01-01"] * 2,
+        "end_date": ["2017-01-01"] * 2,
+        "cumulative_price_return": [1.1 ** (366 / 365.25) - 1, 1.3 ** (366 / 365.25) - 1],
+    })
+    eligible, summary, selected, thresholds = analysis.group_stocks(sample)
+    daily = pd.DataFrame({"symbol": ["A", "A", "B", "X"],
+                          "daily_return": [0.1, float("nan"), -0.10001, 0.9]})
+    groups, stocks, distribution = analysis.build_descriptive_supplements(
+        eligible, daily, summary, selected, thresholds)
+    assert abs(summary["stock_share"].sum() - 1) < 1e-12
+    assert np.abs(np.array(stocks["final_normalized_price"]) - np.array(stocks["final_index_from_cagr"])).max() < 1e-10
+    assert list(stocks["calendar_days"]) == [366, 366]
+    zero_risk = stocks[stocks["symbol"] == "A"]
+    assert np.isnan(np.array(zero_risk["cagr_to_annualized_volatility"])[0])
+    b = stocks[stocks["symbol"] == "B"]
+    assert abs(np.array(b["annualized_volatility"])[0] - 0.02 * np.sqrt(252)) < 1e-12
+    assert int(np.array(distribution["valid_daily_returns"])[0]) == 2
+    assert int(np.array(distribution["outside_10pct"])[0]) == 1
+    assert len(saved["group_threshold_distances"]) == 2
+    analysis.save_table = original
+
+
 if __name__ == "__main__":
     test_return_semantics()
     test_cleaning_and_groups()
+    test_supplemental_tables()
     print("PASS: công thức, khoảng thiếu phiên, tách mã, làm sạch, độ phủ, phân nhóm và hòa ngưỡng.")

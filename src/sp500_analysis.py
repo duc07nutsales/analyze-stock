@@ -1,13 +1,17 @@
-# %% 1. Nhập thư viện và cấu hình — chương 4–7
+# =============================================================================
+### PHẦN 1. NHẬP THƯ VIỆN, THAM SỐ VÀ ĐỌC DỮ LIỆU
+# =============================================================================
 """Phân tích S&P 500; chạy bằng .\run.ps1 từ PowerShell.
 
 Chỉ dùng CSV cục bộ; bước ML chạy sau phần phân tích mô tả.
-Các hàm phân tích được dùng chung với notebook, không sửa dữ liệu gốc.
+Xuất bảng CSV và biểu đồ PNG; dữ liệu gốc được giữ nguyên.
 """
 
+### 1.1. Thư viện xử lý dữ liệu, vẽ biểu đồ và học máy
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
@@ -15,34 +19,39 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 from sklearn.metrics import confusion_matrix, roc_auc_score
 
+### 1.2. Đường dẫn đầu vào và nơi lưu kết quả
 DATA_FILE = "data/S&P 500 Stock Prices 2014-2017.csv"
 OUTPUT_DIR = "outputs"
+
+### 1.3. Ngưỡng phân tích và tham số mô hình
 MIN_COVERAGE = 0.95
 EXTREME_RETURN = 0.20  # Chỉ gắn cờ |return| >= 20%, không tự xóa.
 ML_RANDOM_STATE = 42
 ML_N_TREES = 30
 ML_MAX_ITER = 1000
+TRADING_DAYS_PER_YEAR = 252  # Quy ước tham khảo, không phải số phiên thực mỗi năm.
+NORMAL_95_Z = 1.96
 
 
+### 1.4. Hàm lưu bảng kết quả thành CSV
 def save_table(frame, name):
     frame.to_csv(f"{OUTPUT_DIR}/tables/{name}.csv", index=False, encoding="utf-8-sig")
 
 
+### 1.5. Đọc CSV gốc và lưu năm dòng đầu
 def load_data():
     raw = pd.read_csv(DATA_FILE)
+    save_table(raw[:5].copy(), "raw_preview")
     print("Số dòng dữ liệu gốc:", len(raw))
     print("Tên cột:", list(raw))
     return raw
 
 
-# %% 2. Kiểm toán và làm sạch — chương 8–9
+# =============================================================================
+### PHẦN 2. KIỂM TRA CHẤT LƯỢNG VÀ LÀM SẠCH DỮ LIỆU — chương 8–9
+# =============================================================================
 def clean_data(raw):
-    """Giữ close dùng được; lỗi volume/OHL chỉ cấm phép tính cần các trường đó.
-
-    Khi OHLC mâu thuẫn, không biết giá nào sai nên cách ly cả dòng.
-    Trùng hoàn toàn giữ bản đầu; trùng khóa khác nội dung cách ly cả nhóm.
-    Số dòng lỗi trong quality_flags có thể chồng lấn. cleaning_steps là tuần tự.
-    """
+    ### 2.1. Chuẩn hóa mã cổ phiếu, ngày và số dòng nguồn
     columns = ["symbol", "date", "open", "high", "low", "close", "volume"]
     data = raw[columns].copy()
     data["symbol"] = data["symbol"].str.strip().str.upper()
@@ -50,6 +59,7 @@ def clean_data(raw):
     exact_duplicate = np.array(data.duplicated(subset=columns))
     data["source_row"] = np.arange(len(data)) + 2  # Dòng CSV, tính cả header.
 
+    ### 2.2. Thống kê dữ liệu thiếu và kiểu dữ liệu từng cột
     missing_rows = []
     schema_rows = []
     for column in columns:
@@ -58,6 +68,7 @@ def clean_data(raw):
     save_table(pd.DataFrame(missing_rows), "missing_by_column")
     save_table(pd.DataFrame(schema_rows), "schema")
 
+    ### 2.3. Gắn cờ thiếu, trùng, giá không hợp lệ và mâu thuẫn OHLC
     flags = pd.DataFrame({"source_row": data["source_row"], "symbol": data["symbol"],
                           "date": data["date"]})
     flags["missing_symbol"] = data["symbol"].isna() | (data["symbol"] == "")
@@ -81,12 +92,13 @@ def clean_data(raw):
     save_table(audit, "quality_summary")
     save_table(flags, "quality_flags")
 
-    # Lịch tham chiếu lấy từ toàn bộ ngày hợp lệ, trước khi cách ly giá.
+    ### 2.4. Lập lịch tham chiếu từ các ngày hợp lệ trước khi cách ly giá
     valid_dates = data[data["date"].notna()]["date"]
     calendar = np.unique(np.array(valid_dates, dtype="datetime64[D]"))
     day_numbers = calendar.astype(np.int32)
     session_lookup = {int(day): i for i, day in enumerate(day_numbers)}
 
+    ### 2.5. Loại trùng, cách ly dòng lỗi và ghi lý do theo từng bước
     data["exclude_reason"] = np.where(exact_duplicate, "exact_duplicate", "")
     remaining = data[~exact_duplicate].copy()
     conflicting = remaining.duplicated(subset=["symbol", "date"], keep=False)
@@ -109,13 +121,14 @@ def clean_data(raw):
     clean = clean.set_index(["symbol", "date"]).sort_index().reset_index()
     clean_days = np.array(clean["date"], dtype="datetime64[D]").astype(np.int32)
     clean["session_id"] = [session_lookup[int(day)] for day in clean_days]
-    # Không dùng volume hoặc OHL lỗi để diễn giải thanh khoản/biên độ.
+    ### 2.6. Đánh dấu dòng đủ OHLCV để dùng cho phép tính cần đủ các cột
     complete_ohlcv = np.ones(len(clean), dtype=bool)
     for column in ["open", "high", "low", "close", "volume"]:
         values = np.array(clean[column], dtype=float)
         valid_sign = values >= 0 if column == "volume" else values > 0
         complete_ohlcv = complete_ohlcv & np.isfinite(values) & valid_sign
     clean["complete_ohlcv"] = complete_ohlcv
+    ### 2.7. Xuất dữ liệu sạch, lịch phiên và các bảng kiểm toán
     save_table(excluded, "excluded_rows")
     save_table(pd.DataFrame(steps), "cleaning_steps")
     save_table(clean, "clean_prices")
@@ -126,13 +139,12 @@ def clean_data(raw):
     return clean, audit, calendar, pd.DataFrame(steps)
 
 
-# %% 3. Biến đổi dữ liệu và chỉ tiêu — chương 4–5, 10–11
-def price_metrics(close, sessions, days):
-    """Không dùng shift/pct_change; chỉ chia mảng trong cùng mã.
+# =============================================================================
+### PHẦN 3. TÍNH LỢI SUẤT VÀ CHỈ TIÊU TỪ GIÁ
+# =============================================================================
 
-    Return qua khoảng trống vẫn lưu ở observed_return nhưng không dùng để
-    tính trung bình/volatility một phiên. Lịch là lịch quan sát từ dataset.
-    """
+### 3.1. Công thức lợi suất, mức biến động và CAGR cho một mã
+def price_metrics(close, sessions, days):
     n = len(close)
     observed = np.full(n, float("nan"))
     daily = np.full(n, float("nan"))
@@ -151,6 +163,7 @@ def price_metrics(close, sessions, days):
     return observed, daily, gaps, cumulative, average, volatility, cagr
 
 
+### 3.2. Tính chỉ tiêu cho tất cả mã, kiểm tra độ phủ và xuất bảng
 def analyze_prices(clean, calendar):
     metrics = []
     daily_parts = []
@@ -202,11 +215,16 @@ def analyze_prices(clean, calendar):
     return metrics, daily
 
 
-# %% 4. Phân nhóm theo quy tắc và chọn mã — chương 10–11
+# =============================================================================
+### PHẦN 4. PHÂN NHÓM, CHỌN MÃ VÀ TÍNH BỔ SUNG
+# =============================================================================
+
+### 4.1. Định nghĩa bốn nhóm theo CAGR và mức biến động
 GROUP_NAMES = {"A": "CAGR cao / biến động thấp", "B": "CAGR cao / biến động cao",
                "C": "CAGR thấp / biến động thấp", "D": "CAGR thấp / biến động cao"}
 
 
+### 4.2. Chia nhóm bằng ngưỡng trung bình và chọn hai mã mỗi nhóm
 def group_stocks(metrics):
     eligible = metrics[metrics["eligible"]].copy()
     cagr_threshold = np.array(eligible["cagr"]).mean()
@@ -240,6 +258,7 @@ def group_stocks(metrics):
                 selected_parts.append(last)
     selected = pd.concat(selected_parts, axis=0).reset_index(drop=True)
     summary = pd.DataFrame(summaries)
+    summary["stock_share"] = np.array(summary["stocks"]) / len(eligible)
     thresholds = pd.DataFrame({"metric": ["cagr", "daily_volatility"],
                                "threshold": [cagr_threshold, volatility_threshold],
                                "rule": ["high_if_greater_or_equal_tol_1e-12", "high_if_greater_or_equal_tol_1e-12"]})
@@ -251,17 +270,91 @@ def group_stocks(metrics):
     return eligible, summary, selected, thresholds
 
 
-# %% 5. Trực quan hóa — chương 12–13
+### 4.3. Quy đổi rủi ro theo năm, chỉ số cuối kỳ và khoảng cách tới ngưỡng
+def build_descriptive_supplements(eligible, daily, summary, selected, thresholds):
+    """Bảng 11/13 và bằng chứng bổ sung trong báo cáo Word, dùng số chưa làm tròn."""
+    annual_factor = np.sqrt(TRADING_DAYS_PER_YEAR)
+    group_comparison = summary.copy()
+    annual_vol = np.array(group_comparison["mean_daily_volatility"]) * annual_factor
+    group_comparison["annualized_volatility"] = annual_vol
+    group_comparison["cagr_to_annualized_volatility"] = np.array(summary["mean_cagr"]) / np.where(
+        annual_vol > 0, annual_vol, float("nan"))
+    save_table(group_comparison, "group_annualized_comparison")
+
+    selected_comparison = selected.copy()
+    days = (np.array(pd.to_datetime(selected["end_date"]), dtype="datetime64[D]").astype(np.int32)
+            - np.array(pd.to_datetime(selected["start_date"]), dtype="datetime64[D]").astype(np.int32))
+    selected_comparison["calendar_days"] = days
+    selected_comparison["years"] = days / 365.25
+    selected_comparison["final_normalized_price"] = 100 * (1 + np.array(selected["cumulative_price_return"]))
+    selected_comparison["final_index_from_cagr"] = 100 * (1 + np.array(selected["cagr"])) ** (days / 365.25)
+    annual_vol = np.array(selected["daily_volatility"]) * annual_factor
+    selected_comparison["annualized_volatility"] = annual_vol
+    selected_comparison["cagr_to_annualized_volatility"] = np.array(selected["cagr"]) / np.where(
+        annual_vol > 0, annual_vol, float("nan"))
+    selected_comparison = selected_comparison.set_index(
+        ["final_normalized_price", "symbol"]).sort_index().reset_index()
+    save_table(selected_comparison, "selected_stock_comparison")
+
+    chosen = daily[np.isin(np.array(daily["symbol"]), np.array(eligible["symbol"]))]
+    values = np.array(chosen["daily_return"])
+    values = values[np.isfinite(values)]
+    distribution = pd.DataFrame([{
+        "valid_daily_returns": len(values), "within_10pct": int((np.abs(values) <= 0.10).sum()),
+        "outside_10pct": int((np.abs(values) > 0.10).sum()),
+        "minimum_return": float(values.min()), "maximum_return": float(values.max()),
+        "mean_return": float(values.mean()), "std_return": float(values.std()),
+    }])
+    save_table(distribution, "return_distribution_summary")
+
+    distances = eligible[["symbol", "group", "cagr", "daily_volatility"]].copy()
+    bounds = np.array(thresholds["threshold"])
+    distances["cagr_distance_pp"] = (np.array(eligible["cagr"]) - bounds[0]) * 100
+    distances["volatility_distance_pp"] = (np.array(eligible["daily_volatility"]) - bounds[1]) * 100
+    distances["absolute_cagr_distance_pp"] = np.abs(np.array(distances["cagr_distance_pp"]))
+    distances = distances.set_index(["absolute_cagr_distance_pp", "symbol"]).sort_index().reset_index()
+    save_table(distances, "group_threshold_distances")
+    return group_comparison, selected_comparison, distribution
+
+
+### 4.4. Đối soát số dòng, số mã, tổng nhóm và các ngưỡng
+def build_consistency_checks(raw, clean, metrics, eligible, summary, thresholds):
+    steps = pd.read_csv(f"{OUTPUT_DIR}/tables/cleaning_steps.csv")
+    weights = np.array(summary["stocks"]) / len(eligible)
+    bounds = np.array(thresholds["threshold"])
+    checks = [
+        ("all_symbols", len(eligible) + int((~np.array(metrics["eligible"])).sum()), len(metrics)),
+        ("group_symbols", int(summary["stocks"].sum()), len(eligible)),
+        ("raw_equals_clean_plus_excluded", len(clean) + int(steps["removed"].sum()), len(raw)),
+        ("weighted_cagr_threshold", float((weights * np.array(summary["mean_cagr"])).sum()), bounds[0]),
+        ("weighted_volatility_threshold", float((weights * np.array(summary["mean_daily_volatility"])).sum()), bounds[1]),
+    ]
+    rows = [{"check": name, "actual": actual, "expected": expected,
+             "absolute_difference": abs(actual - expected), "passed": abs(actual - expected) <= 1e-12}
+            for name, actual, expected in checks]
+    result = pd.DataFrame(rows)
+    save_table(result, "consistency_checks")
+    return result
+
+
+# =============================================================================
+### PHẦN 5. VẼ BẢY BIỂU ĐỒ PHÂN TÍCH DỮ LIỆU
+# =============================================================================
+
+### 5.1. Hàm căn bố cục và lưu ảnh PNG
 def save_figure(name):
     plt.tight_layout()
     plt.savefig(f"{OUTPUT_DIR}/figures/{name}.png", dpi=160)
 
 
-def make_figures(eligible, daily, summary, selected, thresholds):
+### 5.2. Vẽ lần lượt Hình 1–7 từ các bảng phân tích
+def make_figures(eligible, daily, summary, selected, thresholds,
+                 group_comparison, selected_comparison):
     plt.rcParams["font.family"] = "DejaVu Sans"
     plt.rcParams["axes.spines.top"] = False
     plt.rcParams["axes.spines.right"] = False
     palette = {"A": "#087f8c", "B": "#df7b27", "C": "#4c6fb5", "D": "#ad4668"}
+    ### 5.2.1. Hình 1 — Phân phối lợi suất một phiên
     chosen_daily = daily[np.isin(np.array(daily["symbol"]), np.array(eligible["symbol"]))]
     returns = np.array(chosen_daily["daily_return"])
     returns = returns[np.isfinite(returns)] * 100
@@ -277,6 +370,7 @@ def make_figures(eligible, daily, summary, selected, thresholds):
         ax.set_ylim(bottom=0)
     save_figure("01_return_distribution")
 
+    ### 5.2.2. Hình 2 — Xếp hạng mười CAGR cao nhất và thấp nhất
     ranked = eligible.set_index(["cagr", "symbol"]).sort_index().reset_index()
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
     for ax, subset, title, color in [(axes[0], ranked[:10], "10 mã CAGR thấp nhất", "#ad4668"),
@@ -288,6 +382,7 @@ def make_figures(eligible, daily, summary, selected, thresholds):
         ax.set_ylabel("Mã cổ phiếu")
     save_figure("02_cagr_ranking")
 
+    ### 5.2.3. Hình 3 — Quan hệ CAGR, mức biến động và bốn nhóm
     fig, ax = plt.subplots(figsize=(10, 6))
     for group in ["A", "B", "C", "D"]:
         members = eligible[eligible["group"] == group]
@@ -303,6 +398,7 @@ def make_figures(eligible, daily, summary, selected, thresholds):
     ax.legend(fontsize=9)
     save_figure("03_risk_return_groups")
 
+    ### 5.2.4. Hình 4 — Số cổ phiếu trong từng nhóm
     fig, ax = plt.subplots(figsize=(8, 4.5))
     counts = np.array(summary["stocks"])
     ax.bar([f"Nhóm {g}" for g in summary["group"]], counts,
@@ -315,7 +411,23 @@ def make_figures(eligible, daily, summary, selected, thresholds):
     ax.set_ylim(0, counts.max() * 1.16)
     save_figure("04_group_counts")
 
-    # Cùng mốc 100; chèn NaN ở phiên thiếu để không nối đường qua khoảng trống.
+    ### 5.2.5. Hình 5 — CAGR, biến động quy năm và tỷ số tham khảo
+    fig, axes = plt.subplots(1, 3, figsize=(14, 4.5))
+    for ax, field, title, unit, scale in zip(
+            axes, ["mean_cagr", "annualized_volatility", "cagr_to_annualized_volatility"],
+            ["CAGR trung bình", "Biến động quy năm", "CAGR / biến động quy năm"],
+            ["%/năm", "%/năm", "Tỷ số tham khảo"], [100, 100, 1]):
+        values = np.array(group_comparison[field]) * scale
+        ax.bar(list(group_comparison["group"]), values, color=[palette[g] for g in summary["group"]])
+        ax.axhline(0, color="#555555", linewidth=0.8)
+        ax.set_ylim(bottom=float(np.minimum(0, values.min() * 1.2)), top=float(values.max() * 1.2))
+        ax.set_title(title)
+        ax.set_xlabel("Nhóm cổ phiếu")
+        ax.set_ylabel(unit)
+    save_figure("05_group_annualized_risk_return")
+
+    ### 5.2.6. Hình 6 — Diễn biến giá tám mã, cùng mốc đầu kỳ bằng 100
+    # Chèn NaN ở phiên thiếu để không nối đường qua khoảng trống.
     fig, axes = plt.subplots(2, 2, figsize=(12, 8), sharex=True)
     # Dùng session_id trực tiếp, không suy ra lịch riêng của từng mã.
     calendar_frame = pd.read_csv(f"{OUTPUT_DIR}/tables/calendar.csv")
@@ -338,122 +450,34 @@ def make_figures(eligible, daily, summary, selected, thresholds):
         ax.set_xticklabels(year_labels)
         if len(members):
             ax.legend()
-    save_figure("05_selected_normalized_prices")
-    print("Đã xuất 5 hình PNG vào outputs/figures.")
+    save_figure("06_selected_normalized_prices")
+
+    ### 5.2.7. Hình 7 — Chỉ số cuối kỳ của tám mã trên thang logarit
+    # Vẽ điểm trên log10(chỉ số), ghi tick theo chỉ số gốc; không vẽ cột từ gốc log tùy ý.
+    fig, ax = plt.subplots(figsize=(10, 5))
+    final_values = np.array(selected_comparison["final_normalized_price"])
+    positions = np.arange(len(final_values))
+    ax.scatter(np.log10(final_values), positions,
+               color=[palette[g] for g in selected_comparison["group"]], s=65)
+    for i, value in enumerate(final_values):
+        ax.text(float(np.log10(value)) + 0.025, i, f"{value:.1f}", va="center")
+    ticks = np.array([10, 30, 100, 300, 1000, 3000])
+    ax.set_xticks(np.log10(ticks))
+    ax.set_xticklabels([str(value) for value in ticks])
+    ax.set(yticks=positions, yticklabels=list(selected_comparison["symbol"]))
+    ax.axvline(2, color="#777777", linestyle="--", linewidth=0.8)
+    ax.set_title("Chỉ số giá cuối kỳ của tám mã được chọn")
+    ax.set_xlabel("Chỉ số giá cuối kỳ — thang logarit (đầu kỳ = 100)")
+    ax.set_ylabel("Mã cổ phiếu")
+    save_figure("07_selected_final_index")
+    print("Đã xuất 7 hình phân tích mô tả vào outputs/figures.")
 
 
-# %% 6. Diễn giải và storytelling dựa trên kết quả thực
-def markdown_table(headers, rows):
-    lines = ["| " + " | ".join(headers) + " |", "| " + " | ".join(["---"] * len(headers)) + " |"]
-    for row in rows:
-        lines.append("| " + " | ".join([str(value) for value in row]) + " |")
-    return "\n" + "\n".join(lines) + "\n"
+# =============================================================================
+### PHẦN 6. HỌC MÁY: TẠO MẪU, HUẤN LUYỆN VÀ ĐÁNH GIÁ
+# =============================================================================
 
-
-def write_report(raw, clean, audit, calendar, steps, metrics, daily, eligible, summary, selected, thresholds):
-    ranked = eligible.set_index(["cagr", "symbol"]).sort_index().reset_index()
-    top_symbol = list(ranked["symbol"])[-1]
-    bottom_symbol = list(ranked["symbol"])[0]
-    top_cagr = np.array(ranked["cagr"])[-1]
-    bottom_cagr = np.array(ranked["cagr"])[0]
-    bounds = np.array(thresholds["threshold"])
-    extreme_count = int(daily["extreme_return_flag"].sum())
-    gap_count = int(daily["gap_before"].sum())
-    invalid_ohlcv = int((~np.array(clean["complete_ohlcv"])).sum())
-    group_rows = []
-    for group, count, cagr, vol in zip(summary["group"], summary["stocks"], summary["mean_cagr"],
-                                      summary["mean_daily_volatility"]):
-        group_rows.append([group, GROUP_NAMES[group], count, f"{cagr:.2%}", f"{vol:.2%}"])
-    selection_rows = []
-    for symbol, group, cagr, vol, coverage, start, end, reason in zip(
-            selected["symbol"], selected["group"], selected["cagr"], selected["daily_volatility"],
-            selected["price_coverage"], selected["start_date"], selected["end_date"], selected["selection_reason"]):
-        selection_rows.append([symbol, group, f"{cagr:.2%}", f"{vol:.2%}", f"{coverage:.2%}", start, end, reason])
-    audit_rows = [[name, count] for name, count in zip(audit["check"], audit["flagged_rows"]) if count > 0]
-    cleaning_rows = [[name, removed, remaining] for name, removed, remaining in
-                     zip(steps["step"], steps["removed"], steps["remaining"])]
-    report = [
-        "# Phân tích lợi suất và rủi ro cổ phiếu S&P 500 (2014–2017)",
-        "\nBáo cáo được sinh từ lần chạy script trên CSV cục bộ. Phạm vi: phân tích và phân nhóm; không có học máy.",
-        "\n## 1. Nhập dữ liệu và kiểm toán chất lượng (chương 6–9)",
-        "\n**Câu hỏi:** Dữ liệu có đủ chất lượng để so sánh biến động giá lịch sử không?",
-        f"\nTệp gốc có **{len(raw):,} dòng**, **{len(metrics)} mã**; lịch quan sát có **{len(calendar):,} ngày**, "
-        f"từ **{calendar[0]}** đến **{calendar[-1]}**. Schema: symbol, date, open, high, low, close, volume.",
-        "\nCác kiểm tra có phát hiện (số dòng có thể chồng lấn):\n",
-        markdown_table(["Kiểm tra", "Số dòng"], audit_rows),
-        "\nSổ xử lý tuần tự, mỗi dòng bị loại chỉ được đếm một lần:\n",
-        markdown_table(["Bước", "Loại trong bước", "Còn lại"], cleaning_rows),
-        f"\nGiữ **{len(clean):,} dòng** cho phân tích close. Có **{invalid_ohlcv:,} dòng** trong số này "
-        "không đủ OHLCV; không dùng chúng cho phép tính cần OHL/volume. Không điền giá thiếu bằng 0. "
-        "Trùng hoàn toàn giữ dòng đầu; khóa trùng khác dữ liệu bị cách ly. OHLC mâu thuẫn bị cách ly vì không xác định được giá nào sai. "
-        "Dòng bị loại và lý do được giữ trong `tables/excluded_rows.csv`.",
-        f"\nCó **{gap_count:,} lợi suất qua khoảng thiếu phiên**: lưu riêng ở observed_return, không coi là daily_return. "
-        f"Có **{extreme_count:,} biến động quan sát |return| ≥ {EXTREME_RETURN:.0%}** được gắn cờ, **không tự xóa**; "
-        "xem `tables/extreme_returns_review.csv`. Cờ này không chứng minh một sự kiện chia tách cổ phiếu.",
-        "\n## 2. Biến đổi và công thức (chương 4–5, 10–11)",
-        "\n**Câu hỏi:** Đo hiệu suất và rủi ro trên cùng cơ sở như thế nào?",
-        "\n- Lợi suất một phiên: `close_t / close_(t-1) - 1`, chỉ khi hai quan sát thuộc hai phiên liền kề trong lịch dataset và cùng mã."
-        "\n- Lợi suất giá tích lũy: `close_t / close_0 - 1`; chỉ số chuẩn hóa: `100 * close_t / close_0`."
-        "\n- Lợi suất ngày trung bình: trung bình các daily_return hợp lệ."
-        "\n- Daily volatility: NumPy `std()` với ddof=0, độ lệch chuẩn tổng thể mô tả mẫu quan sát, không thường niên hóa."
-        "\n- CAGR giá: `(close_end / close_start) ** (1 / Y) - 1`, `Y = số ngày lịch / 365.25`.",
-        f"\nSo sánh chung từ {calendar[0]} đến {calendar[-1]}; cần đủ hai đầu mút, "
-        f"ít nhất {MIN_COVERAGE:.0%} phiên có close hợp lệ và {MIN_COVERAGE:.0%} cặp phiên liên tiếp có return. "
-        f"Có **{len(eligible)} mã đạt**, **{len(metrics)-len(eligible)} mã không đạt**. "
-        "Các mã không đạt vẫn có bảng chỉ tiêu theo kỳ riêng nhưng không tham gia xếp hạng/phân nhóm. "
-        "Lịch tham chiếu là hợp các ngày quan sát, không phải lịch sàn được kiểm chứng độc lập.",
-        "\n## 3. Phân phối và xếp hạng hiệu suất (chương 12–13)",
-        "\n**Câu hỏi:** Lợi suất phân bố ra sao, mã nào nổi bật trong kỳ chung?",
-        "\n![Phân phối lợi suất](figures/01_return_distribution.png)",
-        "\nHình trái giữ toàn bộ phân phối; hình phải chỉ phóng to vùng ±10%, ghi số quan sát ngoài vùng. "
-        "Các mã–phiên có thể phụ thuộc lẫn nhau; đây không phải mẫu các quan sát độc lập hay bằng chứng lợi suất tương lai.",
-        "\n![CAGR thấp và cao](figures/02_cagr_ranking.png)",
-        f"\nTrong tập đủ điều kiện, **{top_symbol}** có CAGR cao nhất ({top_cagr:.2%}/năm), "
-        f"**{bottom_symbol}** có CAGR thấp nhất ({bottom_cagr:.2%}/năm). "
-        "CAGR đo hai đầu kỳ và không mô tả đường đi; cần đọc cùng volatility và đường giá chuẩn hóa.",
-        "\n## 4. Bốn nhóm theo quy tắc",
-        "\n**Câu hỏi:** Các mã khác nhau thế nào về kết hợp hiệu suất và biến động?",
-        f"\nNgưỡng trung bình: **CAGR {bounds[0]:.2%}/năm**, **daily volatility {bounds[1]:.2%}**. "
-        "Bằng ngưỡng được xếp vào phía cao (dung sai số thực tuyệt đối 1e-12 ở đơn vị tỷ lệ). Đây là phân nhóm mô tả, không phải clustering học máy. "
-        "Ngưỡng được tính sau khi kiểm tra dữ liệu theo quy tắc định trước; trung bình có thể nhạy với ngoại lai.",
-        "\n![CAGR và biến động](figures/03_risk_return_groups.png)",
-        markdown_table(["Nhóm", "Quy tắc", "Số mã", "CAGR TB/năm", "Volatility TB/ngày"], group_rows),
-        "\n![Số mã theo nhóm](figures/04_group_counts.png)",
-        "\nNhóm A có lợi suất cao và biến động thấp **tương đối trong mẫu**, nhóm B đi cùng biến động cao. "
-        "Nhóm C/D nằm dưới ngưỡng CAGR; điều đó không tự động có nghĩa CAGR âm. Không nhóm nào được gán là an toàn hay chắc chắn sinh lời.",
-        "\n## 5. Các mã chuyên sâu",
-        "\n**Quy tắc chọn:** lấy hai đầu CAGR trong mỗi nhóm, tối đa 8 mã; khi hòa chọn symbol tăng dần "
-        "(nếu cả nhóm cùng CAGR, chọn hai symbol đầu–cuối). Đây là các ví dụ ở hai đầu, không phải mẫu đại diện ngẫu nhiên. "
-        "Việc chọn dựa trên toàn kỳ chỉ dùng để mô tả lịch sử.",
-        markdown_table(["Mã", "Nhóm", "CAGR/năm", "Volatility/ngày", "Độ phủ", "Đầu kỳ", "Cuối kỳ", "Lý do"], selection_rows),
-        "\n![Giá chuẩn hóa các mã chọn](figures/05_selected_normalized_prices.png)",
-        "\nTất cả đường giá bắt đầu ở cùng phiên và mốc 100, giúp so sánh biến động tương đối "
-        "mà không bị mức giá danh nghĩa chi phối. Các ô có thang dọc riêng; đọc giá trị trục khi so sánh giữa ô. "
-        "Phiên thiếu được để đứt đường, không nội suy.",
-        "\n## 6. Storytelling và hàm ý",
-        f"\nTừ {len(raw):,} dòng gốc, kiểm toán xác định phần dữ liệu sử dụng được và giữ dấu vết các dòng cách ly. "
-        f"Bộ lọc độ phủ đưa {len(eligible)} mã về cùng kỳ so sánh, tránh xếp cổ phiếu mới có lịch sử ngắn "
-        "cùng những mã đủ bốn năm. Chênh lệch CAGR cho thấy hiệu suất lịch sử phân hóa, nhưng cần đọc kèm "
-        "biến động vì hai mã có hiệu suất gần nhau vẫn có thể trải qua các đường giá khác nhau.",
-        "\nBốn nhóm là một cách tổ chức kết quả để sàng lọc nghiên cứu tiếp: nhóm A giúp tìm các trường hợp "
-        "kết hợp hiệu suất trên trung bình với biến động dưới trung bình; nhóm B cần xem kỹ biến động đi kèm; "
-        "nhóm C/D cung cấp đối chiếu với hiệu suất dưới trung bình. Các mã ở hai đầu mỗi nhóm cho phép "
-        "quan sát sự khác biệt bên trong cùng một nhãn, thay vì xem nhãn nhóm là kết luận cuối cùng.",
-        "\n**Giới hạn:** dữ liệu chỉ giai đoạn 2014–2017; không có thông tin xác nhận adjusted prices/cổ tức/chia tách. "
-        "Các chỉ tiêu là lợi suất **giá được cung cấp**, không phải total return. Danh sách công ty có thể có "
-        "survivorship bias và không đại diện đầy đủ thành phần S&P 500 qua từng thời điểm. "
-        "Bộ lọc độ phủ cũng có thể tạo thiên lệch chọn mẫu. Không có dữ liệu cơ bản, thuế, phí giao dịch, "
-        "lãi suất phi rủi ro hoặc backtest. Kết quả là mô tả lịch sử và gợi ý nghiên cứu, không phải khuyến nghị mua/bán.",
-        "\n**Tái lập:** chạy `run.ps1`; tham số ở đầu `src/sp500_analysis.py`; bảng CSV trong `outputs/tables`, "
-        "hình PNG trong `outputs/figures`. Dữ liệu gốc được giữ nguyên."
-    ]
-    text = "\n".join(report)
-    np.savetxt(f"{OUTPUT_DIR}/report.md", np.array([text]), fmt="%s", encoding="utf-8")
-    print("Đã xuất báo cáo:", f"{OUTPUT_DIR}/report.md")
-    return text
-
-
-# %% 7. Học máy: tạo mẫu, huấn luyện và đánh giá
+### 6.1. Năm đặc trưng đầu vào và hàm lưu bảng ML
 FEATURES = ["return_1d_t", "range_t", "intraday_t", "volume_t", "volume_change_t"]
 
 
@@ -461,12 +485,8 @@ def save_ml_table(frame, name):
     frame.to_csv(f"{OUTPUT_DIR}/tables/{name}.csv", index=False, encoding="utf-8-sig")
 
 
+### 6.2. Tạo đặc trưng, nhãn phiên tiếp theo và chia train/test theo năm
 def build_ml_samples(clean):
-    """Tạo mẫu theo từng mã; không dùng bộ lọc CAGR/độ phủ toàn kỳ.
-
-    Cột `reason` cho biết vì sao từng dòng clean có/không có mẫu ML.
-    Chỉ `label` dùng giá t+1; FEATURES chỉ dùng dữ liệu tới cuối t.
-    """
     ordered = clean.set_index(["symbol", "date"]).sort_index().reset_index()
     blocks = []
     cutoff = pd.to_datetime("2017-01-01")
@@ -549,6 +569,7 @@ def build_ml_samples(clean):
     return train, test, audit
 
 
+### 6.3. Tính Accuracy, Precision, Recall, F1, ROC-AUC và ma trận đúng/sai
 def evaluate_predictions(name, y_true, y_pred, y_score, n_train, train_positive):
     matrix = confusion_matrix(y_true, y_pred)
     tn, fp = int(matrix[0, 0]), int(matrix[0, 1])
@@ -567,6 +588,7 @@ def evaluate_predictions(name, y_true, y_pred, y_score, n_train, train_positive)
     return metrics, counts
 
 
+### 6.4. Huấn luyện hai mô hình và so sánh với baseline
 def fit_and_evaluate(train, test):
     x_train = np.array(train[FEATURES], dtype=float)
     x_test = np.array(test[FEATURES], dtype=float)
@@ -579,11 +601,13 @@ def fit_and_evaluate(train, test):
         print("Dừng ML: còn đặc trưng không hữu hạn.")
         return None
 
+    ### 6.4.1. Baseline — Luôn đoán lớp đa số của tập train
     positives = int((y_train == 1).sum())
     negatives = int((y_train == 0).sum())
     baseline_label = 1 if positives > negatives else 0
     baseline_pred = np.full(len(y_test), baseline_label)
 
+    ### 6.4.2. Logistic Regression — Chuẩn hóa theo train rồi huấn luyện
     scaler = StandardScaler()
     scaled_train = scaler.fit_transform(x_train)
     scaled_test = scaler.transform(x_test)
@@ -592,11 +616,13 @@ def fit_and_evaluate(train, test):
     logistic_pred = logistic.predict(scaled_test)
     logistic_score = logistic.predict_proba(scaled_test)[:, 1]
 
+    ### 6.4.3. Random Forest — Huấn luyện trên đặc trưng gốc
     forest = RandomForestClassifier(n_estimators=ML_N_TREES, random_state=ML_RANDOM_STATE)
     forest.fit(x_train, y_train)
     forest_pred = forest.predict(x_test)
     forest_score = forest.predict_proba(x_test)[:, 1]
 
+    ### 6.4.4. Đánh giá trên cùng tập test và lưu dự đoán từng mẫu
     rows, matrices = [], []
     for name, prediction, score in [
             ("baseline_majority", baseline_pred, None),
@@ -620,7 +646,99 @@ def fit_and_evaluate(train, test):
     return metrics, confusion, predictions
 
 
-def plot_ml_results(metrics, confusion):
+### 6.5. Chỉ số bổ sung, chuẩn hóa ma trận và khoảng tin cậy
+def build_ml_supplements(metrics, confusion, predictions):
+    """Bảng 19 và Hình 10–11; CI iid được tách khỏi so sánh ghép cặp theo ngày."""
+    y_true = np.array(predictions["label"], dtype=int)
+    baseline_correct = np.array(predictions["baseline_prediction"], dtype=int) == y_true
+    baseline_count = int(baseline_correct.sum())
+    n = len(y_true)
+    rows, normalized_rows, day_rows = [], [], []
+    fields = ["baseline_prediction", "logistic_prediction", "forest_prediction"]
+    for i, (name, field) in enumerate(zip(metrics["model"], fields)):
+        predicted = np.array(predictions[field], dtype=int)
+        correct = predicted == y_true
+        tn, fp, fn, tp = np.array(confusion[["tn", "fp", "fn", "tp"]], dtype=int)[i]
+        negative_count, positive_count = int(tn + fp), int(tp + fn)
+        specificity = tn / negative_count if negative_count > 0 else float("nan")
+        recall = tp / positive_count if positive_count > 0 else float("nan")
+        accuracy = int(correct.sum()) / n
+        balanced_accuracy = (specificity + recall) / 2
+        accuracy_se = np.sqrt(accuracy * (1 - accuracy) / n)
+        balanced_se = np.sqrt((specificity * (1 - specificity) / negative_count
+                               + recall * (1 - recall) / positive_count) / 4)
+        paired_delta = correct.astype(float) - baseline_correct.astype(float)
+        delta = float(paired_delta.mean())
+        paired_se = np.sqrt(((paired_delta - delta) ** 2).sum() / (n * (n - 1))) if n > 1 else float("nan")
+
+        by_day = predictions[["target_date"]].copy()
+        by_day["correct"] = correct.astype(int)
+        by_day["baseline_correct"] = baseline_correct.astype(int)
+        accuracy_residual_sums, delta_residual_sums = [], []
+        for date, day in by_day.groupby("target_date"):
+            day_n = len(day)
+            day_correct = int(day["correct"].sum())
+            day_baseline = int(day["baseline_correct"].sum())
+            accuracy_residual_sums.append(day_correct - day_n * accuracy)
+            delta_residual_sums.append(day_correct - day_baseline - day_n * delta)
+            day_rows.append({"model": name, "target_date": date, "samples": day_n,
+                             "correct": day_correct, "baseline_correct": day_baseline,
+                             "accuracy": day_correct / day_n,
+                             "accuracy_difference": (day_correct - day_baseline) / day_n})
+        g = len(accuracy_residual_sums)
+        cluster_se = np.sqrt(g / (g - 1) * (np.array(accuracy_residual_sums) ** 2).sum() / n ** 2) if g > 1 else float("nan")
+        delta_cluster_se = np.sqrt(g / (g - 1) * (np.array(delta_residual_sums) ** 2).sum() / n ** 2) if g > 1 else float("nan")
+        rows.append({
+            "model": name, "test_samples": n, "correct_predictions": int(correct.sum()),
+            "correct_difference_vs_baseline": int(correct.sum()) - baseline_count,
+            "predicted_up_rate": float((predicted == 1).mean()),
+            "specificity_0": specificity, "recall_1": recall, "balanced_accuracy": balanced_accuracy,
+            "balanced_accuracy_se_iid": balanced_se, "accuracy": accuracy, "accuracy_se_iid": accuracy_se,
+            "accuracy_ci95_iid_low": float(np.maximum(0, accuracy - NORMAL_95_Z * accuracy_se)),
+            "accuracy_ci95_iid_high": float(np.minimum(1, accuracy + NORMAL_95_Z * accuracy_se)),
+            "accuracy_difference_vs_baseline": delta, "accuracy_difference_se_iid_paired": paired_se,
+            "target_dates": g, "accuracy_se_date_cluster": cluster_se,
+            "accuracy_ci95_date_cluster_low": float(np.maximum(0, accuracy - NORMAL_95_Z * cluster_se)),
+            "accuracy_ci95_date_cluster_high": float(np.minimum(1, accuracy + NORMAL_95_Z * cluster_se)),
+            "accuracy_difference_se_date_cluster": delta_cluster_se,
+            "accuracy_difference_ci95_date_cluster_low": delta - NORMAL_95_Z * delta_cluster_se,
+            "accuracy_difference_ci95_date_cluster_high": delta + NORMAL_95_Z * delta_cluster_se,
+        })
+        for actual, predicted_label, count, support in [
+                (0, 0, tn, negative_count), (0, 1, fp, negative_count),
+                (1, 0, fn, positive_count), (1, 1, tp, positive_count)]:
+            normalized_rows.append({"model": name, "actual_label": actual, "predicted_label": predicted_label,
+                                    "count": int(count), "actual_class_support": support,
+                                    "row_normalized_rate": count / support if support > 0 else float("nan")})
+    supplementary = pd.DataFrame(rows)
+    normalized = pd.DataFrame(normalized_rows)
+    save_ml_table(supplementary, "ml_supplementary_metrics")
+    save_ml_table(normalized, "ml_confusion_matrices_normalized")
+    save_ml_table(pd.DataFrame(day_rows), "ml_daily_evaluation")
+    return supplementary, normalized
+
+
+### 6.6. Hàm vẽ ma trận đúng/sai dưới dạng số đếm hoặc tỷ lệ
+def draw_confusion_matrix(ax, counts, normalized):
+    matrix = np.array([[counts[0], counts[1]], [counts[2], counts[3]]], dtype=float)
+    supports = matrix.sum(axis=1)
+    for actual in [0, 1]:
+        for predicted in [0, 1]:
+            value = matrix[actual, predicted]
+            rate = value / supports[actual] if supports[actual] > 0 else float("nan")
+            shade = rate if normalized else value / matrix.max()
+            color = (1 - 0.85 * shade, 1 - 0.55 * shade, 1 - 0.25 * shade)
+            ax.add_patch(Rectangle((predicted - 0.5, actual - 0.5), 1, 1, facecolor=color, edgecolor="white"))
+            ax.text(predicted, actual, f"{rate:.1%}" if normalized else f"{int(value):,}",
+                    ha="center", va="center", color="white" if shade > 0.65 else "black", fontsize=13)
+    ax.set(xlim=(-0.5, 1.5), ylim=(1.5, -0.5), xticks=[0, 1], yticks=[0, 1],
+           xticklabels=["Không tăng", "Tăng"], yticklabels=["Không tăng", "Tăng"])
+    ax.set_xlabel("Nhãn dự đoán")
+    ax.set_ylabel("Nhãn thực tế")
+
+
+### 6.7. Vẽ Hình 8–11 để so sánh và đánh giá mô hình
+def plot_ml_results(metrics, confusion, supplementary):
     names = ["Baseline", "Logistic", "Random Forest"]
     fields = [("accuracy", "Accuracy"), ("precision_1", "Precision lớp tăng"),
               ("recall_1", "Recall lớp tăng"), ("f1_1", "F1 lớp tăng")]
@@ -633,97 +751,73 @@ def plot_ml_results(metrics, confusion):
         ax.set_ylabel("Tỷ lệ (0–1)")
         ax.set_ylim(0, 1)
     plt.tight_layout()
-    plt.savefig(f"{OUTPUT_DIR}/figures/ml_metric_comparison.png", dpi=160)
+    plt.savefig(f"{OUTPUT_DIR}/figures/08_ml_metric_comparison.png", dpi=160)
 
     fig, axes = plt.subplots(1, 3, figsize=(13, 4))
     for i, name in enumerate(names):
         ax = axes[i]
         counts = np.array(confusion[["tn", "fp", "fn", "tp"]])[i]
-        ax.bar(["TN", "FP", "FN", "TP"], counts,
-               color=["#4c6fb5", "#df7b27", "#ad4668", "#087f8c"])
+        draw_confusion_matrix(ax, counts, False)
         ax.set_title(name)
-        ax.set_xlabel("Ô confusion matrix")
-        ax.set_ylabel("Số mẫu test")
-        ax.set_ylim(bottom=0)
     plt.tight_layout()
-    plt.savefig(f"{OUTPUT_DIR}/figures/ml_confusion_matrices.png", dpi=160)
+    plt.savefig(f"{OUTPUT_DIR}/figures/09_ml_confusion_matrices.png", dpi=160)
+
+    fig, axes = plt.subplots(1, 3, figsize=(13, 4))
+    for i, name in enumerate(names):
+        counts = np.array(confusion[["tn", "fp", "fn", "tp"]])[i]
+        draw_confusion_matrix(axes[i], counts, True)
+        axes[i].set_title(name + " — chuẩn hóa hàng")
+    save_figure("10_ml_normalized_confusion_matrices")
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
+    positions = np.arange(len(names))
+    for i, accuracy, low, high in zip(positions, supplementary["accuracy"],
+                                      supplementary["accuracy_ci95_iid_low"], supplementary["accuracy_ci95_iid_high"]):
+        axes[0].plot([i, i], [low, high], color="#087f8c", linewidth=2)
+        axes[0].scatter([i], [accuracy], color="#087f8c", s=45)
+        axes[0].text(i, high + 0.0015, f"{accuracy:.2%}", ha="center", fontsize=9)
+    axes[0].set_title("Accuracy và CI 95% minh họa (giả định iid)")
+    axes[0].set_ylabel("Accuracy — trục phóng to")
+    axes[0].set_ylim(float(np.array(supplementary["accuracy_ci95_iid_low"]).min()) - 0.006,
+                     float(np.array(supplementary["accuracy_ci95_iid_high"]).max()) + 0.008)
+    axes[1].bar(names, np.array(supplementary["balanced_accuracy"]), color=["#777777", "#087f8c", "#df7b27"])
+    axes[1].axhline(0.5, color="#555555", linestyle="--")
+    axes[1].set_title("Balanced accuracy trên test 2017")
+    axes[1].set_ylabel("Trung bình Recall hai lớp")
+    axes[1].set_ylim(0, 1)
+    for ax in axes:
+        ax.set_xticks(positions)
+        ax.set_xticklabels(names)
+        ax.set_xlabel("Cách dự đoán")
+    save_figure("11_ml_accuracy_intervals_balanced")
 
 
-def ml_markdown(train, test, audit, metrics, confusion):
-    rows = []
-    for model, n_train, n_test, accuracy, precision, recall, f1, auc in zip(
-            metrics["model"], metrics["train_samples"], metrics["test_samples"],
-            metrics["accuracy"], metrics["precision_1"], metrics["recall_1"],
-            metrics["f1_1"], metrics["roc_auc"]):
-        auc_text = f"{auc:.4f}" if np.isfinite(auc) else "N/A"
-        rows.append(f"| {model} | {n_train:,} | {n_test:,} | {accuracy:.4f} | "
-                    f"{precision:.4f} | {recall:.4f} | {f1:.4f} | {auc_text} |")
-    base_accuracy = np.array(metrics["accuracy"])[0]
-    logistic_gain = np.array(metrics["accuracy"])[1] - base_accuracy
-    forest_gain = np.array(metrics["accuracy"])[2] - base_accuracy
-    if logistic_gain <= 0 and forest_gain <= 0:
-        comparison = "Trong lần kiểm tra này, cả hai mô hình đều không vượt baseline về Accuracy. "
-    else:
-        comparison = "Ít nhất một mô hình vượt baseline về Accuracy trong lần kiểm tra này. "
-    train_rate = int((np.array(train["label"]) == 1).sum()) / len(train)
-    test_rate = int((np.array(test["label"]) == 1).sum()) / len(test)
-    text = (
-        "\n\n## 7. Thử nghiệm học máy: chiều giá phiên kế tiếp\n\n"
-        "**Câu hỏi:** Dữ liệu OHLCV đã biết cuối phiên `t` có giúp dự đoán close phiên kế tiếp "
-        "cùng mã tăng (`1`) hay không tăng (`0`) không? Đây là phân loại chiều giá, không dự báo mức giá.\n\n"
-        "Nhãn chỉ gắn khi có phiên liền kề cùng mã. Năm đặc trưng: daily return hiện tại, "
-        "`(high-low)/open`, `(close-open)/open`, volume hiện tại, thay đổi volume so với phiên trước. "
-        "Không dùng dữ liệu `t+1` trong đặc trưng. Không lọc mã theo kết quả CAGR hoặc độ phủ của cả kỳ. "
-        "Train dùng mẫu có cả `t` và ngày nhãn trong 2014–2016; test dùng cả hai trong 2017. "
-        "Scaler chỉ fit trên train. Random Forest dùng đặc trưng gốc.\n\n"
-        f"Tập train có **{len(train):,} mẫu**, tỷ lệ tăng **{train_rate:.2%}**; "
-        f"test có **{len(test):,} mẫu**, tỷ lệ tăng **{test_rate:.2%}**. "
-        "Xem `tables/ml_sample_audit.csv` để biết số mẫu loại theo lý do. "
-        "Baseline luôn đoán nhãn đa số của train.\n\n"
-        "![So sánh chỉ số ML](figures/ml_metric_comparison.png)\n\n"
-        "| Mô hình | Train | Test | Accuracy | Precision 1 | Recall 1 | F1 1 | ROC-AUC |\n"
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n"
-        + "\n".join(rows) + "\n\n"
-        "![Confusion matrix theo mô hình](figures/ml_confusion_matrices.png)\n\n"
-        f"So với baseline, Accuracy của Logistic Regression chênh **{logistic_gain:+.4f}**, "
-        f"Random Forest chênh **{forest_gain:+.4f}** (đơn vị tỷ lệ). "
-        + comparison +
-        "Baseline luôn đoán lớp tăng vì đó là nhãn đa số train; Recall lớp tăng bằng 1 "
-        "theo cách đoán này nên F1 cao không tự chứng minh khả năng phân biệt hai lớp. "
-        "Bảng `tables/ml_confusion_matrices.csv` có TN/FP/FN/TP; "
-        "`tables/ml_test_predictions.csv` cho phép đối chiếu từng mẫu test. "
-        "F1 được tính từ Precision/Recall, quy ước 0 khi mẫu số bằng 0. "
-        "ROC-AUC dùng xác suất lớp tăng và chỉ có ý nghĩa khi test có cả hai lớp; "
-        "baseline để N/A.\n\n"
-        "## 8. Storytelling kết hợp và giới hạn ML\n\n"
-        "Phần phân tích lịch sử cho thấy hiệu suất và biến động khác nhau giữa các mã. "
-        "Thử nghiệm ML hỏi một câu khác: có dự đoán được **chiều** close phiên sau từ thông tin hiện tại hay không. "
-        "So sánh với baseline và xem đồng thời Accuracy, Precision, Recall, F1 giúp tránh kết luận "
-        "từ một chỉ số đơn lẻ. Dù mô hình có vượt baseline, điều đó không chứng minh có chiến lược "
-        "giao dịch sinh lời. Dữ liệu chỉ đến 2017, giá có thể chưa điều chỉnh chia tách/cổ tức, "
-        "mẫu công ty có thể thiên lệch, và bài không có phí, thuế, trượt giá hay backtest. "
-        "Không diễn giải hệ số hay biến quan trọng như quan hệ nhân quả.\n"
-    )
-    return text
-
-
-def run_ml(clean, base_report):
+### 6.8. Điều phối phần ML và đối soát tổng số mẫu
+def run_ml(clean):
     train, test, audit = build_ml_samples(clean)
     outcome = fit_and_evaluate(train, test)
     if outcome is None:
         raise ValueError("Không đủ mẫu/lớp hợp lệ để đánh giá ML; xem ml_sample_audit.csv.")
     metrics, confusion, predictions = outcome
-    plot_ml_results(metrics, confusion)
-    addition = ml_markdown(train, test, audit, metrics, confusion)
-    np.savetxt(f"{OUTPUT_DIR}/report.md", np.array([base_report + addition]), fmt="%s", encoding="utf-8")
-    print("Đã cập nhật outputs/report.md với kết quả ML.")
-    return addition
+    supplementary, normalized = build_ml_supplements(metrics, confusion, predictions)
+    plot_ml_results(metrics, confusion, supplementary)
+    checks = pd.read_csv(f"{OUTPUT_DIR}/tables/consistency_checks.csv")
+    audit_total = int(np.array(audit[list(audit)[1:]], dtype=int).sum())
+    extra_check = pd.DataFrame([{"check": "ml_used_plus_excluded_equals_clean", "actual": audit_total,
+                                 "expected": len(clean), "absolute_difference": abs(audit_total - len(clean)),
+                                 "passed": audit_total == len(clean)}])
+    save_table(pd.concat([checks, extra_check], axis=0), "consistency_checks")
+    return metrics, confusion, predictions, supplementary, normalized
 
 
-# %% 8. Chạy toàn bộ quy trình
+# =============================================================================
+### PHẦN 7. CHẠY TOÀN BỘ QUY TRÌNH
+# =============================================================================
+
+### 7.1. Gọi lần lượt đọc, làm sạch, phân tích, vẽ hình và học máy
 def main():
     raw = load_data()
-    clean, audit, calendar, steps = clean_data(raw)
+    clean, _, calendar, _ = clean_data(raw)
     if len(clean) == 0 or len(calendar) < 2:
         print("Dừng: không đủ dữ liệu giá/ngày để phân tích.")
         return None
@@ -732,12 +826,15 @@ def main():
         print("Dừng: không có mã đủ điều kiện. Xem stock_metrics_all.csv; không tự hạ ngưỡng.")
         return None
     eligible, summary, selected, thresholds = group_stocks(metrics)
-    make_figures(eligible, daily, summary, selected, thresholds)
-    report = write_report(raw, clean, audit, calendar, steps, metrics, daily,
-                          eligible, summary, selected, thresholds)
-    ml_result = run_ml(clean, report)
-    return ml_result
+    group_comparison, selected_comparison, _ = build_descriptive_supplements(
+        eligible, daily, summary, selected, thresholds)
+    build_consistency_checks(raw, clean, metrics, eligible, summary, thresholds)
+    make_figures(eligible, daily, summary, selected, thresholds, group_comparison, selected_comparison)
+    result = run_ml(clean)
+    print("Hoàn thành. Bảng CSV: outputs/tables; biểu đồ PNG: outputs/figures.")
+    return result
 
 
+### 7.2. Điểm bắt đầu khi chạy script
 if __name__ == "__main__":
     main()
